@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports — IMRC</title>
+<link rel="stylesheet" href="css/style.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .summary-row { display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 10px; background: var(--bg-tertiary); border-radius: var(--radius-sm);
+    margin-bottom: 6px; font-size: 13px; }
+  .summary-row:last-child { margin-bottom: 0; }
+  .profit-pos { color: var(--accent-green); font-weight: 700; font-family: var(--font-mono); }
+  .profit-neg { color: var(--accent-red);   font-weight: 700; font-family: var(--font-mono); }
+  @media (max-width: 900px) { .report-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div id="title-bar">
+  <div class="title-logo"><i class="fas fa-mobile-alt" style="font-size:10px"></i></div>
+  <div class="title-text company-name-title">IMRC — Management System</div>
+  <div class="title-actions">
+    <button class="title-btn" onclick="toggleTheme()"><i class="fas fa-adjust"></i></button>
+    <button class="title-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</div>
+
+<div id="app-wrapper">
+  <div id="sidebar">
+    <div class="sidebar-header">Navigation</div>
+    <div class="sidebar-menu">
+      <a class="sidebar-item" href="index.html"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-perm="parties" href="add_parties.html"><i class="fas fa-users"></i><span>Add Parties</span></a>
+      <a class="sidebar-item" data-perm="products" href="add_products.html"><i class="fas fa-box"></i><span>Add Products</span></a>
+      <a class="sidebar-item" data-perm="purchase" href="purchase.html"><i class="fas fa-shopping-cart"></i><span>Purchase Products</span></a>
+      <a class="sidebar-item" data-perm="sale" href="sales.html"><i class="fas fa-receipt"></i><span>Sale Products</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-perm="payments" href="payments.html"><i class="fas fa-hand-holding-usd"></i><span>Payments</span></a>
+      <a class="sidebar-item active" data-perm="report" href="reports.html"><i class="fas fa-chart-bar"></i><span>Reports</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" href="settings.html"><i class="fas fa-cog"></i><span>Settings</span></a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sidebar-avatar">A</div>
+        <div>
+          <div style="font-size:12px;color:var(--text-primary);font-weight:600" id="sidebar-username">Admin</div>
+          <div style="font-size:10px;color:var(--text-muted)" id="sidebar-role">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="main-content">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div class="page-header-icon"><i class="fas fa-chart-bar"></i></div>
+        <h2>Reports</h2>
+        <div class="page-header-sub">Profit, loss & stock analysis</div>
+      </div>
+
+      <!-- Date Filter -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title"><i class="fas fa-filter" style="color:var(--accent-blue)"></i> Date Range Filter</div>
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group" style="margin-bottom:0;flex:1;min-width:140px">
+            <label class="form-label">From Date</label>
+            <input type="date" class="form-control" id="rep-from">
+          </div>
+          <div class="form-group" style="margin-bottom:0;flex:1;min-width:140px">
+            <label class="form-label">To Date</label>
+            <input type="date" class="form-control" id="rep-to">
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;padding-bottom:1px">
+            <button class="btn btn-secondary btn-sm" onclick="setRange('today')">Today</button>
+            <button class="btn btn-secondary btn-sm" onclick="setRange('week')">This Week</button>
+            <button class="btn btn-secondary btn-sm" onclick="setRange('month')">This Month</button>
+            <button class="btn btn-secondary btn-sm" onclick="setRange('year')">This Year</button>
+          </div>
+          <button class="btn btn-primary" onclick="generateReport()" style="padding:7px 20px;flex-shrink:0">
+            <i class="fas fa-search"></i> Generate
+          </button>
+        </div>
+      </div>
+
+      <!-- Period Summary + Low Stock -->
+      <div class="report-grid">
+        <div class="card">
+          <div class="card-title"><i class="fas fa-calendar-alt" style="color:var(--accent-green)"></i> Period Summary</div>
+          <div id="period-summary">
+            <div style="color:var(--text-muted);font-size:12px;text-align:center;padding:16px">
+              Select a date range and click Generate.
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title" style="justify-content:space-between">
+            <span><i class="fas fa-exclamation-triangle blink" style="color:var(--accent-red)"></i> Low Stock Alert</span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-success btn-sm" onclick="exportLowStockExcel()">
+                <i class="fas fa-file-excel"></i> Excel
+              </button>
+              <button class="btn btn-info btn-sm" onclick="printLowStock()">
+                <i class="fas fa-print"></i> Print
+              </button>
+            </div>
+          </div>
+          <div id="low-stock-report"></div>
+        </div>
+      </div>
+
+      <!-- Product-wise Sales Report -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="justify-content:space-between">
+          <span><i class="fas fa-box" style="color:var(--accent-blue)"></i> Product-wise Sales</span>
+          <button class="btn btn-success btn-sm" onclick="exportProductReport()">
+            <i class="fas fa-file-excel"></i> Export Excel
+          </button>
+        </div>
+        <div id="product-report-msg" style="color:var(--text-muted);font-size:12px;padding:12px;text-align:center">
+          Generate a report to see product-wise data.
+        </div>
+        <div class="table-wrapper" id="product-report-table" style="display:none">
+          <table>
+            <thead>
+              <tr><th>Product</th><th>Qty Sold</th><th>Sale Amount</th><th>Cost Amount</th><th>Profit</th><th>Margin%</th></tr>
+            </thead>
+            <tbody id="product-report-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Party-wise Report -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="justify-content:space-between">
+          <span><i class="fas fa-users" style="color:var(--accent-blue)"></i> Party-wise Report</span>
+          <button class="btn btn-success btn-sm" onclick="exportPartyReport()">
+            <i class="fas fa-file-excel"></i> Export Excel
+          </button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>Party Name</th><th>Contact</th><th>Total Bills</th><th>Total Sales</th><th>Payments Received</th><th>Balance Due</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody id="party-report-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sale History in period -->
+      <div class="card" style="margin-bottom:16px" id="period-sales-card" style="display:none">
+        <div class="card-title" style="justify-content:space-between">
+          <span><i class="fas fa-receipt" style="color:var(--accent-blue)"></i> Sales in Period</span>
+          <button class="btn btn-success btn-sm" onclick="exportSalesExcel()">
+            <i class="fas fa-file-excel"></i> Export Excel
+          </button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Slip</th><th>Date</th><th>Party</th><th>Type</th><th>Bill Total</th><th>Profit</th></tr></thead>
+            <tbody id="period-sales-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="page-footer">Developer: Muhammad Iqbal | 0317-5825000 | iqbalje@gmail.com</div>
+    </div>
+  </div>
+</div>
+
+<div id="status-bar">
+  <div class="status-item"><i class="fas fa-circle" style="color:#4ec9b0;font-size:8px"></i> Connected</div>
+  <div class="status-item" id="status-user"></div>
+  <div class="status-item" id="status-time"></div>
+  <div style="margin-left:auto" class="status-item"><i class="fas fa-mobile-alt"></i> IMRC</div>
+</div>
+<div id="toast-container"></div>
+
+<script src="js/db.js"></script>
+<script>
+  const currentUser = initSidebar('report');
+  if (!currentUser) throw new Error('Not logged in');
+
+  let reportSales     = [];
+  let reportProducts  = {};
+
+  // Init
+  (function init() {
+    const today = todayISO();
+    document.getElementById('rep-from').value = today.slice(0, 7) + '-01'; // first of month
+    document.getElementById('rep-to').value   = today;
+    renderLowStock();
+    renderPartyReport();
+  })();
+
+  /* ===== DATE RANGE SHORTCUTS ===== */
+  function setRange(type) {
+    const now   = new Date();
+    const today = todayISO();
+    let from, to = today;
+    if (type === 'today') { from = today; }
+    else if (type === 'week') {
+      const d = new Date(now);
+      d.setDate(d.getDate() - d.getDay());
+      from = d.toISOString().split('T')[0];
+    } else if (type === 'month') {
+      from = today.slice(0, 7) + '-01';
+    } else if (type === 'year') {
+      from = today.slice(0, 4) + '-01-01';
+    }
+    document.getElementById('rep-from').value = from;
+    document.getElementById('rep-to').value   = to;
+    generateReport();
+  }
+
+  /* ===== GENERATE REPORT ===== */
+  function generateReport() {
+    const from = document.getElementById('rep-from').value;
+    const to   = document.getElementById('rep-to').value;
+    if (!from || !to) { showToast('Select date range.', 'warning'); return; }
+
+    const sales    = DB.get('sales', []);
+    const products = DB.get('products', []);
+
+    reportSales = sales.filter(s => s.date >= from && s.date <= to);
+
+    let totalSale = 0, totalCost = 0, totalProfit = 0;
+    const prodMap = {};
+
+    reportSales.forEach(s => {
+      totalSale += s.billTotal;
+      s.items.forEach(item => {
+        const prod = products.find(p => p.id == item.productId);
+        const cost = (prod?.purchaseRate || 0) * item.qty;
+        totalCost   += cost;
+        totalProfit += (item.rate - (prod?.purchaseRate || 0)) * item.qty;
+        if (!prodMap[item.productId]) {
+          prodMap[item.productId] = {
+            name: item.productName || item.productId,
+            qtySold: 0, saleAmt: 0, costAmt: 0, profit: 0
+          };
+        }
+        prodMap[item.productId].qtySold  += item.qty;
+        prodMap[item.productId].saleAmt  += item.total;
+        prodMap[item.productId].costAmt  += cost;
+        prodMap[item.productId].profit   += (item.rate - (prod?.purchaseRate || 0)) * item.qty;
+      });
+    });
+
+    reportProducts = prodMap;
+
+    /* Summary card */
+    document.getElementById('period-summary').innerHTML = `
+      <div class="summary-row">
+        <span style="color:var(--text-muted)">Period</span>
+        <span style="font-weight:600">${formatDate(from)} → ${formatDate(to)}</span>
+      </div>
+      <div class="summary-row">
+        <span style="color:var(--text-muted)">Total Bills</span>
+        <span style="font-weight:700;font-family:var(--font-mono)">${reportSales.length}</span>
+      </div>
+      <div class="summary-row">
+        <span style="color:var(--text-muted)">Total Sales</span>
+        <span class="profit-pos">${fmtMoney(totalSale)}</span>
+      </div>
+      <div class="summary-row">
+        <span style="color:var(--text-muted)">Total Cost</span>
+        <span style="font-family:var(--font-mono);font-weight:700;color:var(--accent-orange)">${fmtMoney(totalCost)}</span>
+      </div>
+      <div class="summary-row" style="border:1px solid var(--border-color);border-radius:var(--radius-sm)">
+        <span style="font-weight:700">Net Profit</span>
+        <span class="${totalProfit >= 0 ? 'profit-pos' : 'profit-neg'}" style="font-size:16px">${fmtMoney(totalProfit)}</span>
+      </div>`;
+
+    /* Product-wise table */
+    const prodList = Object.values(prodMap).sort((a, b) => b.profit - a.profit);
+    document.getElementById('product-report-msg').style.display = 'none';
+    document.getElementById('product-report-table').style.display = 'block';
+    document.getElementById('product-report-body').innerHTML = prodList.map(p => {
+      const margin = p.saleAmt > 0 ? ((p.profit / p.saleAmt) * 100).toFixed(1) : '0';
+      return `<tr>
+        <td><strong>${p.name}</strong></td>
+        <td style="font-family:var(--font-mono)">${p.qtySold}</td>
+        <td style="font-family:var(--font-mono)">${fmtMoney(p.saleAmt)}</td>
+        <td style="font-family:var(--font-mono)">${fmtMoney(p.costAmt)}</td>
+        <td class="${p.profit >= 0 ? 'profit-pos' : 'profit-neg'}">${fmtMoney(p.profit)}</td>
+        <td style="color:var(--accent-green)">${margin}%</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px">No sales in this period.</td></tr>';
+
+    /* Period sales table */
+    document.getElementById('period-sales-card').style.display = 'block';
+    document.getElementById('period-sales-body').innerHTML = [...reportSales].reverse().map(s => {
+      let profit = 0;
+      const products2 = DB.get('products', []);
+      s.items.forEach(item => {
+        const prod = products2.find(p => p.id == item.productId);
+        profit += (item.rate - (prod?.purchaseRate || 0)) * item.qty;
+      });
+      return `<tr>
+        <td><strong>${s.slip}</strong></td>
+        <td>${formatDate(s.date)}</td>
+        <td>${s.partyName || '—'}</td>
+        <td><span class="badge ${s.saleType === 'Cash' ? 'badge-success' : 'badge-warning'}">${s.saleType}</span></td>
+        <td style="font-family:var(--font-mono)">${fmtMoney(s.billTotal)}</td>
+        <td class="${profit >= 0 ? 'profit-pos' : 'profit-neg'}">${fmtMoney(profit)}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px">No sales in this period.</td></tr>';
+
+    showToast('Report generated!', 'success');
+  }
+
+  /* ===== LOW STOCK ===== */
+  function renderLowStock() {
+    const products  = DB.get('products', []);
+    const lowItems  = products.filter(p => p.stock <= (p.lowAlert || 5));
+    const container = document.getElementById('low-stock-report');
+    if (!lowItems.length) {
+      container.innerHTML = '<div style="color:var(--accent-green);padding:12px;text-align:center"><i class="fas fa-check-circle"></i> All stock levels OK</div>';
+      return;
+    }
+    container.innerHTML = lowItems.map(p => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:12px">
+        <span>${p.name}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-danger blink">${p.stock} / ${p.lowAlert || 5}</span>
+          <span style="font-size:11px;color:var(--text-muted)">short: ${Math.max(0, (p.lowAlert || 5) - p.stock)}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  /* ===== PARTY REPORT ===== */
+  function renderPartyReport() {
+    const parties  = DB.get('parties', []);
+    const sales    = DB.get('sales', []);
+    const payments = DB.get('payments', []);
+    const tbody    = document.getElementById('party-report-body');
+    tbody.innerHTML = parties.map(party => {
+      const partySales  = sales.filter(s => s.partyId == party.id);
+      const totalSales  = partySales.reduce((s, x) => s + x.billTotal, 0);
+      const totalBills  = partySales.length;
+      const totalPaid   = payments.filter(p => p.partyId == party.id).reduce((s, p) => s + p.amount, 0);
+      const balance     = party.balance || 0;
+      return `<tr>
+        <td><strong>${party.name}</strong></td>
+        <td>${party.contact || '—'}</td>
+        <td style="font-family:var(--font-mono)">${totalBills}</td>
+        <td style="font-family:var(--font-mono)">${fmtMoney(totalSales)}</td>
+        <td style="font-family:var(--font-mono);color:var(--accent-green)">${fmtMoney(totalPaid)}</td>
+        <td style="font-family:var(--font-mono);font-weight:700;color:${balance > 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">
+          ${fmtMoney(balance)}
+        </td>
+        <td>${balance > 0
+          ? '<span class="badge badge-danger">Due</span>'
+          : '<span class="badge badge-success">Clear</span>'}
+        </td>
+        <td>
+          ${balance > 0
+            ? `<button class="btn btn-whatsapp btn-sm" onclick="sendPaymentReminder(${party.id})"><i class="fab fa-whatsapp"></i> Remind</button>`
+            : '—'}
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px">No parties added.</td></tr>';
+  }
+
+  /* ===== EXCEL EXPORTS ===== */
+  function exportLowStockExcel() {
+    const products  = DB.get('products', []);
+    const lowItems  = products.filter(p => p.stock <= (p.lowAlert || 5));
+    if (!lowItems.length) { showToast('No low stock items!', 'info'); return; }
+    const rows = [
+      ['S.No','Product','Purchase Rate','Sale Rate','Current Stock','Alert Level','Short By'],
+      ...lowItems.map((p, i) => [
+        i+1, p.name, p.purchaseRate, p.saleRate,
+        p.stock, p.lowAlert || 5, Math.max(0, (p.lowAlert || 5) - p.stock)
+      ])
+    ];
+    writeExcel(rows, 'LowStock', 'LowStock_IMRC_' + todayISO() + '.xlsx');
+    showToast('Excel downloaded!', 'success');
+  }
+
+  function exportProductReport() {
+    const data = Object.values(reportProducts);
+    if (!data.length) { showToast('Generate a report first.', 'warning'); return; }
+    const rows = [
+      ['Product','Qty Sold','Sale Amount','Cost Amount','Profit','Margin%'],
+      ...data.map(p => [
+        p.name, p.qtySold, p.saleAmt, p.costAmt, p.profit,
+        p.saleAmt > 0 ? ((p.profit / p.saleAmt) * 100).toFixed(1) + '%' : '0%'
+      ])
+    ];
+    writeExcel(rows, 'Products', 'ProductReport_IMRC_' + todayISO() + '.xlsx');
+    showToast('Excel downloaded!', 'success');
+  }
+
+  function exportPartyReport() {
+    const parties  = DB.get('parties', []);
+    const sales    = DB.get('sales', []);
+    const payments = DB.get('payments', []);
+    const rows = [
+      ['Party Name','Contact','Total Bills','Total Sales','Payments Received','Balance Due','Status'],
+      ...parties.map(p => {
+        const ps  = sales.filter(s => s.partyId == p.id);
+        const tot = ps.reduce((s, x) => s + x.billTotal, 0);
+        const paid = payments.filter(pay => pay.partyId == p.id).reduce((s, pay) => s + pay.amount, 0);
+        return [p.name, p.contact || '', ps.length, tot, paid, p.balance || 0, p.balance > 0 ? 'Due' : 'Clear'];
+      })
+    ];
+    writeExcel(rows, 'Parties', 'PartyReport_IMRC_' + todayISO() + '.xlsx');
+    showToast('Excel downloaded!', 'success');
+  }
+
+  function exportSalesExcel() {
+    if (!reportSales.length) { showToast('Generate a report first.', 'warning'); return; }
+    const products = DB.get('products', []);
+    const rows = [
+      ['Slip No','Date','Party','Type','Bill Total','Profit'],
+      ...reportSales.map(s => {
+        let profit = 0;
+        s.items.forEach(item => {
+          const prod = products.find(p => p.id == item.productId);
+          profit += (item.rate - (prod?.purchaseRate || 0)) * item.qty;
+        });
+        return [s.slip, s.date, s.partyName, s.saleType, s.billTotal, profit];
+      })
+    ];
+    writeExcel(rows, 'Sales', 'SalesReport_IMRC_' + todayISO() + '.xlsx');
+    showToast('Excel downloaded!', 'success');
+  }
+
+  function writeExcel(rows, sheetName, filename) {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, filename);
+  }
+</script>
+</body>
+</html>

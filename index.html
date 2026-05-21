@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — IMRC</title>
+<link rel="stylesheet" href="css/style.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+<div id="title-bar">
+  <div class="title-logo"><i class="fas fa-mobile-alt" style="font-size:10px"></i></div>
+  <div class="title-text company-name-title">IMRC — Management System</div>
+  <div class="title-actions">
+    <button class="title-btn" title="Toggle Theme" onclick="toggleTheme()"><i class="fas fa-adjust"></i></button>
+    <button class="title-btn" title="Logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</div>
+
+<div id="app-wrapper">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sidebar-header">Navigation</div>
+    <div class="sidebar-menu">
+      <a class="sidebar-item active" data-page="dashboard" href="index.html"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-page="parties" data-perm="parties" href="add_parties.html"><i class="fas fa-users"></i><span>Add Parties</span></a>
+      <a class="sidebar-item" data-page="products" data-perm="products" href="add_products.html"><i class="fas fa-box"></i><span>Add Products</span></a>
+      <a class="sidebar-item" data-page="purchase" data-perm="purchase" href="purchase.html"><i class="fas fa-shopping-cart"></i><span>Purchase Products</span></a>
+      <a class="sidebar-item" data-page="sale" data-perm="sale" href="sales.html"><i class="fas fa-receipt"></i><span>Sale Products</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-page="payments" data-perm="payments" href="payments.html"><i class="fas fa-hand-holding-usd"></i><span>Payments</span></a>
+      <a class="sidebar-item" data-page="report" data-perm="report" href="reports.html"><i class="fas fa-chart-bar"></i><span>Reports</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-page="settings" href="settings.html"><i class="fas fa-cog"></i><span>Settings</span></a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sidebar-avatar">A</div>
+        <div>
+          <div style="font-size:12px;color:var(--text-primary);font-weight:600" id="sidebar-username">Admin</div>
+          <div style="font-size:10px;color:var(--text-muted)" id="sidebar-role">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main-content">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div class="page-header-icon"><i class="fas fa-th-large"></i></div>
+        <h2>Dashboard</h2>
+        <div class="page-header-sub" id="dash-date"></div>
+      </div>
+
+      <!-- ADMIN DASHBOARD -->
+      <div id="admin-dash">
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card blue">
+            <div class="stat-icon"><i class="fas fa-boxes"></i></div>
+            <div class="stat-value" id="stat-stock-val">Rs 0</div>
+            <div class="stat-label">Total Stock Value</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-icon"><i class="fas fa-cash-register"></i></div>
+            <div class="stat-value" id="stat-today-sale">Rs 0</div>
+            <div class="stat-label">Today's Sale</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+            <div class="stat-value" id="stat-today-profit">Rs 0</div>
+            <div class="stat-label">Today's Profit</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-icon blink"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="stat-value" id="stat-low-count">0</div>
+            <div class="stat-label">Low Stock Items</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
+            <div class="stat-value" id="stat-outstanding">Rs 0</div>
+            <div class="stat-label">Total Outstanding</div>
+          </div>
+          <div class="stat-card green" style="--before-bg:var(--accent-green)">
+            <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+            <div class="stat-value" id="stat-month-sale">Rs 0</div>
+            <div class="stat-label">This Month Sale</div>
+          </div>
+        </div>
+
+        <!-- Outstanding Marquee -->
+        <div class="marquee-wrapper">
+          <div class="marquee-label"><i class="fas fa-bell" style="margin-right:4px"></i> Outstanding Balances</div>
+          <div class="marquee" id="outstanding-marquee">
+            <span class="marquee-item" style="color:var(--accent-green)"><i class="fas fa-check-circle"></i> No outstanding balances.</span>
+          </div>
+        </div>
+
+        <!-- Two column row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <!-- Top 5 Outstanding Parties -->
+          <div class="card">
+            <div class="card-title" style="justify-content:space-between">
+              <span><i class="fas fa-users" style="color:var(--accent-red)"></i> Top Pending Parties</span>
+              <a href="payments.html" style="font-size:11px;color:var(--accent-blue);text-decoration:none">View All →</a>
+            </div>
+            <div id="top-pending-parties" style="font-size:12.5px"></div>
+          </div>
+          <!-- Quick Actions -->
+          <div class="card">
+            <div class="card-title"><i class="fas fa-bolt" style="color:var(--accent-yellow)"></i> Quick Actions</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <a href="sales.html" class="btn btn-primary" style="justify-content:center"><i class="fas fa-plus-circle"></i> New Sale</a>
+              <a href="purchase.html" class="btn btn-success" style="justify-content:center"><i class="fas fa-shopping-cart"></i> New Purchase</a>
+              <a href="payments.html" class="btn btn-warning" style="justify-content:center"><i class="fas fa-hand-holding-usd"></i> Record Payment</a>
+              <a href="reports.html" class="btn btn-secondary" style="justify-content:center"><i class="fas fa-chart-bar"></i> View Reports</a>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <!-- Last Sale -->
+          <div class="card">
+            <div class="card-title"><i class="fas fa-clock" style="color:var(--accent-blue)"></i> Last Sale</div>
+            <div id="last-sale-info" style="color:var(--text-secondary);font-size:13px">No sales recorded yet.</div>
+          </div>
+          <!-- Low Stock -->
+          <div class="card">
+            <div class="card-title" style="justify-content:space-between">
+              <span><i class="fas fa-exclamation-triangle blink" style="color:var(--accent-red)"></i> Low Stock Alert</span>
+              <a href="reports.html" style="font-size:11px;color:var(--accent-blue);text-decoration:none">Full Report →</a>
+            </div>
+            <div id="low-stock-list" style="font-size:12.5px"></div>
+          </div>
+        </div>
+
+        <!-- Recent Sales Table -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title" style="justify-content:space-between">
+            <span><i class="fas fa-history" style="color:var(--accent-blue)"></i> Recent Sales</span>
+            <a href="sales.html" style="font-size:11px;color:var(--accent-blue);text-decoration:none">All Sales →</a>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Slip</th><th>Date</th><th>Party</th><th>Type</th><th>Total</th><th>Outstanding</th></tr></thead>
+              <tbody id="recent-sales-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- USER DASHBOARD -->
+      <div id="user-dash" style="display:none">
+        <div class="stats-grid">
+          <div class="stat-card green">
+            <div class="stat-icon"><i class="fas fa-cash-register"></i></div>
+            <div class="stat-value" id="u-today-sale">Rs 0</div>
+            <div class="stat-label">Today's Sale</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-icon"><i class="fas fa-receipt"></i></div>
+            <div class="stat-value" id="u-total-bills">0</div>
+            <div class="stat-label">Total Bills</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-icon"><i class="fas fa-boxes"></i></div>
+            <div class="stat-value" id="u-products">0</div>
+            <div class="stat-label">Total Products</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-history" style="color:var(--accent-blue)"></i> My Recent Sales</div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Slip No</th><th>Party</th><th>Date</th><th>Amount</th><th>Type</th></tr></thead>
+              <tbody id="user-recent-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="page-footer">Developer: Muhammad Iqbal | 0317-5825000 | iqbalje@gmail.com</div>
+    </div>
+  </div>
+</div>
+
+<div id="status-bar">
+  <div class="status-item"><i class="fas fa-circle" style="color:#4ec9b0;font-size:8px"></i> Connected</div>
+  <div class="status-item" id="status-user"><i class="fas fa-user"></i> Admin</div>
+  <div class="status-item" id="status-time"></div>
+  <div style="margin-left:auto" class="status-item"><i class="fas fa-mobile-alt"></i> <span class="company-name-title">IMRC</span></div>
+</div>
+<div id="toast-container"></div>
+
+<script src="js/db.js"></script>
+<script>
+  const currentUser = initSidebar('dashboard');
+  if (!currentUser) throw new Error('Not logged in');
+
+  const co = Company.get();
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-PK', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+
+  if (currentUser.role === 'admin') {
+    document.getElementById('admin-dash').style.display = 'block';
+    document.getElementById('user-dash').style.display = 'none';
+    loadAdminDash();
+  } else {
+    document.getElementById('admin-dash').style.display = 'none';
+    document.getElementById('user-dash').style.display = 'block';
+    loadUserDash();
+  }
+
+  function loadAdminDash() {
+    const products = DB.get('products', []);
+    const sales = DB.get('sales', []);
+    const parties = DB.get('parties', []);
+    const today = todayISO();
+    const monthStr = today.substring(0, 7);
+
+    // Stock value
+    const stockVal = products.reduce((s, p) => s + (p.stock * p.purchaseRate), 0);
+    document.getElementById('stat-stock-val').textContent = fmtMoney(stockVal);
+
+    // Today sale & profit
+    const todaySales = sales.filter(s => s.date === today);
+    const todaySaleAmt = todaySales.reduce((s, x) => s + x.billTotal, 0);
+    let todayProfit = 0;
+    todaySales.forEach(s => {
+      s.items.forEach(item => {
+        const prod = products.find(p => p.id == item.productId);
+        if (prod) todayProfit += (item.rate - prod.purchaseRate) * item.qty;
+      });
+    });
+    document.getElementById('stat-today-sale').textContent = fmtMoney(todaySaleAmt);
+    document.getElementById('stat-today-profit').textContent = fmtMoney(todayProfit);
+
+    // Month sale
+    const monthSale = sales.filter(s => s.date.startsWith(monthStr)).reduce((s, x) => s + x.billTotal, 0);
+    document.getElementById('stat-month-sale').textContent = fmtMoney(monthSale);
+
+    // Low stock
+    const lowItems = products.filter(p => p.stock <= (p.lowAlert || 5));
+    document.getElementById('stat-low-count').textContent = lowItems.length;
+
+    // Outstanding
+    const totalOut = parties.reduce((s, p) => s + (p.balance || 0), 0);
+    document.getElementById('stat-outstanding').textContent = fmtMoney(totalOut);
+
+    // Marquee
+    const outParties = parties.filter(p => p.balance > 0);
+    const marq = document.getElementById('outstanding-marquee');
+    if (outParties.length) {
+      const items = outParties.map(p => `<span class="marquee-item"><i class="fas fa-user" style="margin-right:4px;color:var(--accent-blue)"></i>${p.name}: <b>Rs ${(p.balance || 0).toLocaleString()}</b></span>`);
+      marq.innerHTML = [...items, ...items].join('<span style="margin:0 14px;color:var(--border-color)">|</span>');
+    } else {
+      marq.innerHTML = '<span class="marquee-item" style="color:var(--accent-green)"><i class="fas fa-check-circle"></i> No outstanding balances.</span>';
+    }
+
+    // Top 5 pending parties
+    const top5 = [...outParties].sort((a, b) => b.balance - a.balance).slice(0, 5);
+    document.getElementById('top-pending-parties').innerHTML = top5.length ? top5.map(p => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-color)">
+        <div>
+          <div style="font-weight:600;font-size:12.5px">${p.name}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${p.contact || '—'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-family:var(--font-mono);font-weight:700;color:var(--accent-red)">${fmtMoney(p.balance)}</span>
+          <button class="btn btn-whatsapp btn-sm" onclick="sendPaymentReminder(${p.id})" title="WhatsApp Reminder"><i class="fab fa-whatsapp"></i></button>
+        </div>
+      </div>`).join('') : '<div style="color:var(--accent-green);font-size:12px;padding:8px 0"><i class="fas fa-check-circle"></i> All balances clear!</div>';
+
+    // Low stock list
+    document.getElementById('low-stock-list').innerHTML = lowItems.slice(0, 6).map(p =>
+      `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-color);font-size:12px">
+        <span>${p.name}</span>
+        <span class="badge badge-danger blink">${p.stock} left</span>
+      </div>`).join('') || '<div style="color:var(--accent-green);font-size:12px;padding:8px 0"><i class="fas fa-check-circle"></i> All stock levels OK</div>';
+
+    // Last sale
+    const lastSale = sales[sales.length - 1];
+    if (lastSale) {
+      document.getElementById('last-sale-info').innerHTML = `
+        <div style="font-size:13px;font-weight:600;color:var(--text-primary)">${lastSale.partyName || 'Unknown'}</div>
+        <div style="font-size:12px;color:var(--text-muted)">Slip: ${lastSale.slip} | ${formatDate(lastSale.date)}</div>
+        <div style="font-size:14px;font-family:var(--font-mono);color:var(--accent-green);margin-top:4px">${fmtMoney(lastSale.grandTotal)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">by ${lastSale.createdBy || 'Admin'}</div>`;
+    }
+
+    // Recent sales table
+    const recent = [...sales].reverse().slice(0, 8);
+    document.getElementById('recent-sales-body').innerHTML = recent.map(s => {
+      const party = parties.find(p => p.id == s.partyId);
+      const outstanding = party ? party.balance : 0;
+      return `<tr>
+        <td><strong>${s.slip}</strong></td>
+        <td>${formatDate(s.date)}</td>
+        <td>${s.partyName || '—'}</td>
+        <td><span class="badge ${s.saleType === 'Cash' ? 'badge-success' : 'badge-warning'}">${s.saleType}</span></td>
+        <td style="font-family:var(--font-mono)">${fmtMoney(s.billTotal)}</td>
+        <td style="font-family:var(--font-mono);color:${outstanding > 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">
+          ${outstanding > 0 ? fmtMoney(outstanding) : '<span class="badge badge-success">Clear</span>'}
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px">No sales yet.</td></tr>';
+  }
+
+  function loadUserDash() {
+    const sales = DB.get('sales', []);
+    const products = DB.get('products', []);
+    const today = todayISO();
+    const todaySales = sales.filter(s => s.date === today);
+    document.getElementById('u-today-sale').textContent = fmtMoney(todaySales.reduce((s, x) => s + x.billTotal, 0));
+    document.getElementById('u-total-bills').textContent = sales.length;
+    document.getElementById('u-products').textContent = products.length;
+    const recent = [...sales].reverse().slice(0, 10);
+    document.getElementById('user-recent-body').innerHTML = recent.map(s =>
+      `<tr><td><strong>${s.slip}</strong></td><td>${s.partyName}</td><td>${formatDate(s.date)}</td>
+      <td style="font-family:var(--font-mono)">${fmtMoney(s.billTotal)}</td>
+      <td><span class="badge ${s.saleType === 'Cash' ? 'badge-success' : 'badge-warning'}">${s.saleType}</span></td></tr>`
+    ).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">No sales yet.</td></tr>';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sale Products — IMRC</title>
+<link rel="stylesheet" href="css/style.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  /* POS Autocomplete */
+  .prod-suggest-box {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 300;
+    background: var(--bg-secondary); border: 1px solid var(--accent-blue);
+    border-top: none; border-radius: 0 0 4px 4px;
+    max-height: 200px; overflow-y: auto; display: none;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+  }
+  .prod-suggest-item {
+    padding: 7px 12px; cursor: pointer; font-size: 12px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex; justify-content: space-between; align-items: center;
+    transition: background 0.1s;
+  }
+  .prod-suggest-item:last-child { border-bottom: none; }
+  .prod-suggest-item:hover, .prod-suggest-item.focused { background: var(--bg-selected); color: #fff; }
+  .prod-suggest-item .suggest-meta { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+  .prod-suggest-item.focused .suggest-meta { color: rgba(255,255,255,0.7); }
+  /* Sale item row */
+  .sale-item-row { display: grid; grid-template-columns: 2fr 80px 100px 100px 40px; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .sale-items-header { display: grid; grid-template-columns: 2fr 80px 100px 100px 40px; gap: 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); padding-bottom: 6px; border-bottom: 1px solid var(--border-color); margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div id="title-bar">
+  <div class="title-logo"><i class="fas fa-mobile-alt" style="font-size:10px"></i></div>
+  <div class="title-text company-name-title">IMRC — Management System</div>
+  <div class="title-actions">
+    <button class="title-btn" onclick="toggleTheme()"><i class="fas fa-adjust"></i></button>
+    <button class="title-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</div>
+<div id="app-wrapper">
+  <div id="sidebar">
+    <div class="sidebar-header">Navigation</div>
+    <div class="sidebar-menu">
+      <a class="sidebar-item" href="index.html"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-perm="parties" href="add_parties.html"><i class="fas fa-users"></i><span>Add Parties</span></a>
+      <a class="sidebar-item" data-perm="products" href="add_products.html"><i class="fas fa-box"></i><span>Add Products</span></a>
+      <a class="sidebar-item" data-perm="purchase" href="purchase.html"><i class="fas fa-shopping-cart"></i><span>Purchase Products</span></a>
+      <a class="sidebar-item active" data-perm="sale" href="sales.html"><i class="fas fa-receipt"></i><span>Sale Products</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-perm="payments" href="payments.html"><i class="fas fa-hand-holding-usd"></i><span>Payments</span></a>
+      <a class="sidebar-item" data-perm="report" href="reports.html"><i class="fas fa-chart-bar"></i><span>Reports</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" href="settings.html"><i class="fas fa-cog"></i><span>Settings</span></a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sidebar-avatar">A</div>
+        <div>
+          <div style="font-size:12px;color:var(--text-primary);font-weight:600" id="sidebar-username">Admin</div>
+          <div style="font-size:10px;color:var(--text-muted)" id="sidebar-role">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="main-content">
+    <div class="page-content">
+      <div class="page-header">
+        <div class="page-header-icon"><i class="fas fa-receipt"></i></div>
+        <h2>Sale Products</h2>
+        <div class="page-header-sub">Create sale invoices</div>
+      </div>
+
+      <!-- Sale Invoice Form -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title"><i class="fas fa-file-invoice-dollar" style="color:var(--accent-blue)"></i> Sale Invoice</div>
+        <div class="form-row cols-4">
+          <div class="form-group">
+            <label class="form-label">Party Name *</label>
+            <select class="form-control" id="sale-party" onchange="onPartyChange()">
+              <option value="">-- Select Party --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Payment Type</label>
+            <select class="form-control" id="sale-type">
+              <option value="Cash">Cash</option>
+              <option value="Credit">Credit</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Slip No</label>
+            <input type="text" class="form-control" id="sale-slip" readonly style="background:var(--bg-primary)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-control" id="sale-date">
+          </div>
+        </div>
+        <div id="prev-bal-alert" class="alert alert-warning" style="display:none;margin-top:-4px">
+          <i class="fas fa-exclamation-circle"></i> Previous Balance: <strong id="prev-bal-amt">Rs 0</strong>
+        </div>
+      </div>
+
+      <!-- Sale Items -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title"><i class="fas fa-plus" style="color:var(--accent-green)"></i> Sale Items</div>
+        <div class="sale-items-header">
+          <span>Product (type to search)</span><span>Qty</span><span>Rate</span><span>Total</span><span></span>
+        </div>
+        <div id="sale-items-container"></div>
+        <button class="btn btn-secondary btn-sm" onclick="addSaleRow()" style="margin-top:6px">
+          <i class="fas fa-plus"></i> Add Item
+        </button>
+        <div class="bill-total-row">
+          <div><span class="bill-total-label">Bill Total:</span> <span class="bill-total-value" id="bill-total">Rs 0</span></div>
+          <div><span class="bill-total-label">Prev Balance:</span> <span class="bill-total-value" id="prev-show" style="color:var(--accent-orange)">Rs 0</span></div>
+          <div><span class="bill-total-label">Grand Total:</span> <span class="bill-total-value" id="grand-total" style="font-size:16px">Rs 0</span></div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="saveSale()"><i class="fas fa-save"></i> Save Sale</button>
+        <button class="btn btn-whatsapp" onclick="saveSaleAndWhatsApp()"><i class="fab fa-whatsapp"></i> Save & WhatsApp</button>
+        <button class="btn btn-info" onclick="saveSaleAndPrint()"><i class="fas fa-print"></i> Save & Print</button>
+        <button class="btn btn-secondary" onclick="clearSaleForm()"><i class="fas fa-times"></i> Clear</button>
+      </div>
+
+      <!-- Sale Return Modal trigger -->
+      <div style="margin-top:8px">
+        <button class="btn btn-warning btn-sm" onclick="openReturnModal()"><i class="fas fa-undo"></i> Sale Return</button>
+      </div>
+
+      <!-- History -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-title" style="justify-content:space-between">
+          <span><i class="fas fa-history" style="color:var(--accent-blue)"></i> Sale History</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" class="form-control" id="sale-search" placeholder="Search..." oninput="filterSales()" style="width:180px">
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Slip No</th><th>Date</th><th>Party</th><th>Type</th><th>Bill Total</th><th>Paid</th><th>Remaining</th><th>Actions</th></tr></thead>
+            <tbody id="sale-history-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="page-footer">Developer: Muhammad Iqbal | 0317-5825000 | iqbalje@gmail.com</div>
+    </div>
+  </div>
+</div>
+<div id="status-bar">
+  <div class="status-item"><i class="fas fa-circle" style="color:#4ec9b0;font-size:8px"></i> Connected</div>
+  <div class="status-item" id="status-user"></div>
+  <div class="status-item" id="status-time"></div>
+  <div style="margin-left:auto" class="status-item"><i class="fas fa-mobile-alt"></i> IMRC</div>
+</div>
+
+<!-- Sale Return Modal -->
+<div class="modal-overlay" id="return-modal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h3><i class="fas fa-undo" style="color:var(--accent-orange);margin-right:6px"></i> Sale Return</h3>
+      <button class="modal-close" onclick="closeModal('return-modal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Select Sale (Slip No)</label>
+        <select class="form-control" id="return-slip-sel" onchange="loadReturnItems()">
+          <option value="">-- Select Sale --</option>
+        </select>
+      </div>
+      <div id="return-items-display" style="margin-top:10px"></div>
+      <div class="form-group" style="margin-top:10px">
+        <label class="form-label">Return Reason</label>
+        <input type="text" class="form-control" id="return-reason" placeholder="Reason for return">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('return-modal')"><i class="fas fa-times"></i> Cancel</button>
+      <button class="btn btn-warning" onclick="processReturn()"><i class="fas fa-undo"></i> Process Return</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/db.js"></script>
+<script>
+  const currentUser = initSidebar('sale');
+  if (!currentUser) throw new Error('Not logged in');
+
+  let rowCount = 0;
+  let allSales = [];
+
+  // Init
+  (function init() {
+    document.getElementById('sale-date').value = todayISO();
+    generateSlipNo();
+    loadParties();
+    addSaleRow();
+    loadSaleHistory();
+  })();
+
+  function generateSlipNo() {
+    const sales = DB.get('sales', []);
+    document.getElementById('sale-slip').value = 'Iq-' + String(sales.length + 1).padStart(4, '0');
+  }
+
+  function loadParties() {
+    const parties = DB.get('parties', []);
+    const sel = document.getElementById('sale-party');
+    sel.innerHTML = '<option value="">-- Select Party --</option>' +
+      parties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  }
+
+  function onPartyChange() {
+    const partyId = document.getElementById('sale-party').value;
+    const party = DB.get('parties', []).find(p => p.id == partyId);
+    const prevBal = party?.balance || 0;
+    if (prevBal > 0) {
+      document.getElementById('prev-bal-alert').style.display = 'flex';
+      document.getElementById('prev-bal-amt').textContent = fmtMoney(prevBal);
+    } else {
+      document.getElementById('prev-bal-alert').style.display = 'none';
+    }
+    calcGrand();
+  }
+
+  // ===== ADD ROW =====
+  function addSaleRow(prodId = '', qty = 1, rate = 0) {
+    rowCount++;
+    const rc = rowCount;
+    const row = document.createElement('div');
+    row.className = 'sale-item-row';
+    row.id = 'sale-row-' + rc;
+    row.innerHTML = `
+      <div style="position:relative">
+        <input type="text" class="form-control" id="sr-name-${rc}" placeholder="Type product name..." autocomplete="off"
+          oninput="showSuggest(${rc})" onkeydown="suggestNav(event,${rc})" onfocus="showSuggest(${rc})" style="font-size:12px">
+        <input type="hidden" id="sr-id-${rc}">
+        <div class="prod-suggest-box" id="sr-suggest-${rc}"></div>
+      </div>
+      <input type="number" class="form-control" id="sr-qty-${rc}" value="${qty}" min="1"
+        oninput="calcRowTotal(${rc})" style="font-size:12px">
+      <input type="number" class="form-control" id="sr-rate-${rc}" value="${rate}"
+        oninput="calcRowTotal(${rc})" style="font-size:12px">
+      <input type="number" class="form-control" id="sr-total-${rc}" value="${qty * rate}" readonly
+        style="background:var(--bg-primary);font-size:12px;font-family:var(--font-mono)">
+      <button class="btn btn-danger btn-sm" onclick="removeRow(${rc})"><i class="fas fa-times"></i></button>`;
+    document.getElementById('sale-items-container').appendChild(row);
+    if (prodId) {
+      const prod = DB.get('products', []).find(p => p.id == prodId);
+      if (prod) selectProduct(rc, prod.id, prod.name, prod.saleRate);
+    }
+    document.getElementById('sr-name-' + rc).focus();
+  }
+
+  function removeRow(rc) {
+    const row = document.getElementById('sale-row-' + rc);
+    if (row) row.remove();
+    calcGrand();
+  }
+
+  // ===== AUTOCOMPLETE =====
+  function showSuggest(rc) {
+    const inp = document.getElementById('sr-name-' + rc);
+    const box = document.getElementById('sr-suggest-' + rc);
+    if (!inp || !box) return;
+    const q = inp.value.toLowerCase().trim();
+    const products = DB.get('products', []);
+    const matches = q ? products.filter(p => p.name.toLowerCase().includes(q)).slice(0, 8) : products.slice(0, 8);
+    if (!matches.length) { box.style.display = 'none'; return; }
+    box.innerHTML = matches.map(p =>
+      `<div class="prod-suggest-item" data-id="${p.id}" data-name="${escAttr(p.name)}" data-rate="${p.saleRate}" data-stock="${p.stock}"
+        onmousedown="selectProduct(${rc},${p.id},'${escJs(p.name)}',${p.saleRate})"
+        onmouseover="this.classList.add('focused')" onmouseout="this.classList.remove('focused')">
+        <span>${highlight(p.name, q)}</span>
+        <span class="suggest-meta">Stock:${p.stock} | Rate:${p.saleRate}</span>
+      </div>`
+    ).join('');
+    box.style.display = 'block';
+  }
+
+  function suggestNav(e, rc) {
+    const box = document.getElementById('sr-suggest-' + rc);
+    if (!box || box.style.display === 'none') return;
+    const items = box.querySelectorAll('.prod-suggest-item');
+    let cur = Array.from(items).findIndex(el => el.classList.contains('focused'));
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (cur >= 0) items[cur].classList.remove('focused');
+      cur = Math.min(cur + 1, items.length - 1);
+      items[cur].classList.add('focused');
+      items[cur].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (cur >= 0) items[cur].classList.remove('focused');
+      cur = Math.max(cur - 1, 0);
+      items[cur].classList.add('focused');
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (cur >= 0) {
+        const it = items[cur];
+        selectProduct(rc, it.dataset.id, it.dataset.name, parseFloat(it.dataset.rate));
+      }
+    } else if (e.key === 'Escape') {
+      box.style.display = 'none';
+    } else if (e.key === 'Tab') {
+      if (cur >= 0) {
+        e.preventDefault();
+        const it = items[cur];
+        selectProduct(rc, it.dataset.id, it.dataset.name, parseFloat(it.dataset.rate));
+      } else {
+        box.style.display = 'none';
+      }
+    }
+  }
+
+  function selectProduct(rc, id, name, rate) {
+    document.getElementById('sr-name-' + rc).value = name;
+    document.getElementById('sr-id-' + rc).value = id;
+    document.getElementById('sr-rate-' + rc).value = rate;
+    const box = document.getElementById('sr-suggest-' + rc);
+    if (box) box.style.display = 'none';
+    calcRowTotal(rc);
+    // Focus qty
+    const qtyEl = document.getElementById('sr-qty-' + rc);
+    if (qtyEl) { qtyEl.focus(); qtyEl.select(); }
+  }
+
+  // Close suggestions on outside click
+  document.addEventListener('click', e => {
+    document.querySelectorAll('.prod-suggest-box').forEach(box => {
+      if (!box.contains(e.target) && !e.target.classList.contains('form-control')) box.style.display = 'none';
+    });
+  });
+
+  function calcRowTotal(rc) {
+    const qty = parseFloat(document.getElementById('sr-qty-' + rc)?.value) || 0;
+    const rate = parseFloat(document.getElementById('sr-rate-' + rc)?.value) || 0;
+    const totalEl = document.getElementById('sr-total-' + rc);
+    if (totalEl) totalEl.value = qty * rate;
+    calcGrand();
+  }
+
+  function calcGrand() {
+    let billTotal = 0;
+    document.querySelectorAll('[id^="sr-total-"]').forEach(el => billTotal += parseFloat(el.value) || 0);
+    const partyId = document.getElementById('sale-party')?.value;
+    const prevBal = partyId ? (DB.get('parties', []).find(p => p.id == partyId)?.balance || 0) : 0;
+    const grand = billTotal + prevBal;
+    document.getElementById('bill-total').textContent = fmtMoney(billTotal);
+    document.getElementById('prev-show').textContent = fmtMoney(prevBal);
+    document.getElementById('grand-total').textContent = fmtMoney(grand);
+    return { billTotal, prevBal, grand };
+  }
+
+  function getSaleData() {
+    const partyId = document.getElementById('sale-party').value;
+    const saleType = document.getElementById('sale-type').value;
+    const slip = document.getElementById('sale-slip').value;
+    const date = document.getElementById('sale-date').value;
+    if (!partyId) { showToast('Select a party.', 'warning'); return null; }
+    const rows = document.querySelectorAll('.sale-item-row');
+    const items = [];
+    let billTotal = 0;
+    let hasError = false;
+    rows.forEach(row => {
+      const rc = row.id.replace('sale-row-', '');
+      const id = document.getElementById('sr-id-' + rc)?.value;
+      const name = document.getElementById('sr-name-' + rc)?.value;
+      const qty = parseFloat(document.getElementById('sr-qty-' + rc)?.value) || 0;
+      const rate = parseFloat(document.getElementById('sr-rate-' + rc)?.value) || 0;
+      const total = qty * rate;
+      if (!id || qty <= 0) { hasError = true; return; }
+      items.push({ productId: id, productName: name, qty, rate, total });
+      billTotal += total;
+    });
+    if (hasError || !items.length) { showToast('Add valid items (product + qty).', 'warning'); return null; }
+
+    const parties = DB.get('parties', []);
+    const partyIdx = parties.findIndex(p => p.id == partyId);
+    const prevBal = parties[partyIdx]?.balance || 0;
+    const grandTotal = billTotal + prevBal;
+
+    return { partyId, partyIdx, parties, saleType, slip, date, items, billTotal, prevBal, grandTotal };
+  }
+
+  function commitSale(data) {
+    const { partyId, partyIdx, parties, saleType, slip, date, items, billTotal, prevBal, grandTotal } = data;
+
+    // Update stock
+    const products = DB.get('products', []);
+    items.forEach(item => {
+      const idx = products.findIndex(p => p.id == item.productId);
+      if (idx > -1) products[idx].stock = Math.max(0, products[idx].stock - item.qty);
+    });
+    DB.set('products', products);
+
+    // Update party balance
+    if (saleType === 'Credit') {
+      parties[partyIdx].balance = grandTotal;
+    } else {
+      parties[partyIdx].balance = 0;
+    }
+    DB.set('parties', parties);
+
+    // Save sale
+    const sales = DB.get('sales', []);
+    const saleObj = {
+      id: Date.now(), partyId,
+      partyName: parties[partyIdx]?.name,
+      saleType, slip, date, items, billTotal, prevBal, grandTotal,
+      paid: saleType === 'Cash' ? grandTotal : 0,
+      createdBy: currentUser.name || currentUser.username
+    };
+    sales.push(saleObj);
+    DB.set('sales', sales);
+    autoSync();
+    return { saleObj, party: parties[partyIdx] };
+  }
+
+  function saveSale() {
+    const data = getSaleData();
+    if (!data) return;
+    commitSale(data);
+    clearSaleForm();
+    loadSaleHistory();
+    showToast('Sale saved! Stock updated.', 'success');
+  }
+
+  function saveSaleAndWhatsApp() {
+    const data = getSaleData();
+    if (!data) return;
+    const { saleObj, party } = commitSale(data);
+    if (!party?.contact) { showToast('Party contact number not found!', 'warning'); }
+    else {
+      const msg = buildWhatsAppMsg(saleObj, party);
+      sendWA(party.contact, msg);
+    }
+    clearSaleForm();
+    loadSaleHistory();
+    showToast('Sale saved!', 'success');
+  }
+
+  function saveSaleAndPrint() {
+    const data = getSaleData();
+    if (!data) return;
+    const { saleObj, party } = commitSale(data);
+    clearSaleForm();
+    loadSaleHistory();
+    printInvoice(saleObj);
+    showToast('Sale saved!', 'success');
+  }
+
+  function clearSaleForm() {
+    document.getElementById('sale-party').value = '';
+    document.getElementById('sale-type').value = 'Cash';
+    document.getElementById('sale-date').value = todayISO();
+    document.getElementById('prev-bal-alert').style.display = 'none';
+    document.getElementById('sale-items-container').innerHTML = '';
+    rowCount = 0;
+    generateSlipNo();
+    addSaleRow();
+    calcGrand();
+  }
+
+  function loadSaleHistory() {
+    allSales = DB.get('sales', []);
+    renderHistory(allSales);
+  }
+
+  function filterSales() {
+    const q = document.getElementById('sale-search').value.toLowerCase();
+    renderHistory(q ? allSales.filter(s => s.slip.toLowerCase().includes(q) || (s.partyName||'').toLowerCase().includes(q)) : allSales);
+  }
+
+  function renderHistory(list) {
+    const tbody = document.getElementById('sale-history-body');
+    tbody.innerHTML = [...list].reverse().map(s => {
+      const paid = s.paid || (s.saleType === 'Cash' ? s.grandTotal : 0);
+      const remaining = s.grandTotal - paid;
+      return `<tr>
+        <td><strong>${s.slip}</strong></td>
+        <td>${formatDate(s.date)}</td>
+        <td>${s.partyName || '—'}</td>
+        <td><span class="badge ${s.saleType === 'Cash' ? 'badge-success' : 'badge-warning'}">${s.saleType}</span></td>
+        <td style="font-family:var(--font-mono)">${fmtMoney(s.billTotal)}</td>
+        <td style="font-family:var(--font-mono);color:var(--accent-green)">${fmtMoney(paid)}</td>
+        <td style="font-family:var(--font-mono);color:${remaining > 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">
+          ${remaining > 0 ? fmtMoney(remaining) : '<span class="badge badge-success">Clear</span>'}
+        </td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-info btn-sm" onclick="printInvoice(${JSON.stringify(s).split('"').join('&quot;')})" title="Print"><i class="fas fa-print"></i></button>
+            <button class="btn btn-whatsapp btn-sm" onclick="resendWA(${s.id})" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="deleteSale(${s.id})" title="Delete"><i class="fas fa-trash"></i></button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px">No sales yet.</td></tr>';
+  }
+
+  function resendWA(id) {
+    const sale = DB.get('sales', []).find(s => s.id == id);
+    if (!sale) return;
+    const party = DB.get('parties', []).find(p => p.id == sale.partyId);
+    if (!party?.contact) { showToast('Party contact not found!', 'warning'); return; }
+    const msg = buildWhatsAppMsg(sale, party);
+    sendWA(party.contact, msg);
+  }
+
+  function deleteSale(id) {
+    showConfirm('Delete Sale', 'Delete this sale? Stock will NOT be reversed automatically.', () => {
+      DB.set('sales', DB.get('sales', []).filter(s => s.id != id));
+      loadSaleHistory();
+      showToast('Sale deleted.', 'warning');
+    });
+  }
+
+  // ===== SALE RETURN =====
+  function openReturnModal() {
+    const sales = DB.get('sales', []);
+    const sel = document.getElementById('return-slip-sel');
+    sel.innerHTML = '<option value="">-- Select Sale --</option>' +
+      [...sales].reverse().map(s => `<option value="${s.id}">${s.slip} — ${s.partyName} (${formatDate(s.date)})</option>`).join('');
+    document.getElementById('return-modal').classList.add('active');
+  }
+
+  function loadReturnItems() {
+    const saleId = document.getElementById('return-slip-sel').value;
+    const sale = DB.get('sales', []).find(s => s.id == saleId);
+    const container = document.getElementById('return-items-display');
+    if (!sale) { container.innerHTML = ''; return; }
+    container.innerHTML = `
+      <div class="card-title" style="margin-bottom:8px"><i class="fas fa-list"></i> Sale Items (select to return)</div>
+      ${sale.items.map((item, i) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-color)">
+          <input type="checkbox" id="ret-chk-${i}" checked style="width:16px;height:16px;cursor:pointer">
+          <div style="flex:1;font-size:12px"><strong>${item.productName}</strong> x${item.qty} @ Rs${item.rate}</div>
+          <input type="number" class="form-control" id="ret-qty-${i}" value="${item.qty}" min="1" max="${item.qty}" style="width:70px;font-size:12px">
+        </div>`).join('')}`;
+  }
+
+  function processReturn() {
+    const saleId = document.getElementById('return-slip-sel').value;
+    const reason = document.getElementById('return-reason').value.trim();
+    const sale = DB.get('sales', []).find(s => s.id == saleId);
+    if (!sale) { showToast('Select a sale.', 'warning'); return; }
+
+    const returnItems = [];
+    let returnTotal = 0;
+    sale.items.forEach((item, i) => {
+      const chk = document.getElementById('ret-chk-' + i);
+      const qtyEl = document.getElementById('ret-qty-' + i);
+      if (chk?.checked) {
+        const retQty = Math.min(parseInt(qtyEl?.value) || 1, item.qty);
+        returnItems.push({ ...item, returnQty: retQty, returnTotal: retQty * item.rate });
+        returnTotal += retQty * item.rate;
+      }
+    });
+
+    if (!returnItems.length) { showToast('Select at least one item.', 'warning'); return; }
+
+    // Restore stock
+    const products = DB.get('products', []);
+    returnItems.forEach(item => {
+      const idx = products.findIndex(p => p.id == item.productId);
+      if (idx > -1) products[idx].stock += item.returnQty;
+    });
+    DB.set('products', products);
+
+    // Adjust party balance
+    const parties = DB.get('parties', []);
+    const partyIdx = parties.findIndex(p => p.id == sale.partyId);
+    if (partyIdx > -1 && sale.saleType === 'Credit') {
+      parties[partyIdx].balance = Math.max(0, (parties[partyIdx].balance || 0) - returnTotal);
+      DB.set('parties', parties);
+    }
+
+    // Log return
+    const returns = DB.get('returns', []);
+    returns.push({
+      id: Date.now(), saleId, slip: sale.slip, partyName: sale.partyName,
+      date: todayISO(), returnItems, returnTotal, reason,
+      createdBy: currentUser.name || currentUser.username
+    });
+    DB.set('returns', returns);
+
+    closeModal('return-modal');
+    loadSaleHistory();
+    showToast(`Return processed! Stock restored. Amount: ${fmtMoney(returnTotal)}`, 'success');
+    autoSync();
+  }
+
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+  // Helpers
+  function highlight(text, q) {
+    if (!q) return text;
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx < 0) return text;
+    return text.slice(0, idx) + '<strong style="color:var(--accent-blue)">' + text.slice(idx, idx + q.length) + '</strong>' + text.slice(idx + q.length);
+  }
+  function escAttr(s) { return s.replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function escJs(s) { return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+
+  // Print override for inline sale objects
+  window._printInvoice = printInvoice;
+  window.printInvoice = function(sale) {
+    if (typeof sale === 'string') { try { sale = JSON.parse(sale); } catch(e) {} }
+    _printInvoice(sale);
+  };
+</script>
+</body>
+</html>

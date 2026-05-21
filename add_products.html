@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Products — IMRC</title>
+<link rel="stylesheet" href="css/style.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+<div id="title-bar">
+  <div class="title-logo"><i class="fas fa-mobile-alt" style="font-size:10px"></i></div>
+  <div class="title-text company-name-title">IMRC — Management System</div>
+  <div class="title-actions">
+    <button class="title-btn" onclick="toggleTheme()"><i class="fas fa-adjust"></i></button>
+    <button class="title-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</div>
+<div id="app-wrapper">
+  <div id="sidebar">
+    <div class="sidebar-header">Navigation</div>
+    <div class="sidebar-menu">
+      <a class="sidebar-item" href="index.html"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-perm="parties" href="add_parties.html"><i class="fas fa-users"></i><span>Add Parties</span></a>
+      <a class="sidebar-item active" data-perm="products" href="add_products.html"><i class="fas fa-box"></i><span>Add Products</span></a>
+      <a class="sidebar-item" data-perm="purchase" href="purchase.html"><i class="fas fa-shopping-cart"></i><span>Purchase Products</span></a>
+      <a class="sidebar-item" data-perm="sale" href="sales.html"><i class="fas fa-receipt"></i><span>Sale Products</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-perm="payments" href="payments.html"><i class="fas fa-hand-holding-usd"></i><span>Payments</span></a>
+      <a class="sidebar-item" data-perm="report" href="reports.html"><i class="fas fa-chart-bar"></i><span>Reports</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" href="settings.html"><i class="fas fa-cog"></i><span>Settings</span></a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sidebar-avatar">A</div>
+        <div>
+          <div style="font-size:12px;color:var(--text-primary);font-weight:600" id="sidebar-username">Admin</div>
+          <div style="font-size:10px;color:var(--text-muted)" id="sidebar-role">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="main-content">
+    <div class="page-content">
+      <div class="page-header">
+        <div class="page-header-icon"><i class="fas fa-box"></i></div>
+        <h2>Add Products</h2>
+        <div class="page-header-sub">Manage your product catalog</div>
+      </div>
+
+      <!-- Product Form -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--accent-blue)"></i> <span id="prod-form-title">New Product</span></div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Product Name *</label>
+            <input type="text" class="form-control" id="pr-name" placeholder="Enter product name">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Purchase Rate</label>
+            <input type="number" class="form-control" id="pr-pur" placeholder="0">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Sale Rate</label>
+            <input type="number" class="form-control" id="pr-sale" placeholder="0">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Opening Stock</label>
+            <input type="number" class="form-control" id="pr-stock" placeholder="0" value="0">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Low Alert</label>
+            <input type="number" class="form-control" id="pr-low" placeholder="5" value="5">
+          </div>
+          <div style="display:flex;gap:6px;padding-bottom:1px">
+            <button class="btn btn-primary" onclick="saveProduct()" title="Save"><i class="fas fa-save"></i></button>
+            <button class="btn btn-secondary" onclick="clearForm()" title="Clear"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+        <input type="hidden" id="pr-edit-id">
+      </div>
+
+      <!-- Product List -->
+      <div class="card">
+        <div class="card-title" style="justify-content:space-between">
+          <span><i class="fas fa-list" style="color:var(--accent-blue)"></i> Products List</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" class="form-control" id="prod-search" placeholder="Search..." oninput="filterProducts()" style="width:200px">
+            <span id="prod-count" style="font-size:11px;color:var(--text-muted);white-space:nowrap"></span>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>S.No</th><th>Product Name</th><th>Purchase Rate</th><th>Sale Rate</th><th>Stock</th><th>Low Alert</th><th>Margin</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="prod-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="page-footer">Developer: Muhammad Iqbal | 0317-5825000 | iqbalje@gmail.com</div>
+    </div>
+  </div>
+</div>
+<div id="status-bar">
+  <div class="status-item"><i class="fas fa-circle" style="color:#4ec9b0;font-size:8px"></i> Connected</div>
+  <div class="status-item" id="status-user"></div>
+  <div class="status-item" id="status-time"></div>
+  <div style="margin-left:auto" class="status-item"><i class="fas fa-mobile-alt"></i> <span class="company-name-title">IMRC</span></div>
+</div>
+<div id="toast-container"></div>
+<script src="js/db.js"></script>
+<script>
+  const currentUser = initSidebar('products');
+  if (!currentUser) throw new Error('Not logged in');
+
+  let allProducts = [];
+
+  function loadProducts() {
+    allProducts = DB.get('products', []);
+    renderTable(allProducts);
+    document.getElementById('prod-count').textContent = allProducts.length + ' products';
+  }
+
+  function renderTable(list) {
+    document.getElementById('prod-table-body').innerHTML = list.map((p, i) => {
+      const isLow = p.stock <= (p.lowAlert || 5);
+      const margin = p.purchaseRate > 0 ? (((p.saleRate - p.purchaseRate) / p.purchaseRate) * 100).toFixed(1) : '—';
+      return `<tr>
+        <td>${i+1}</td>
+        <td><strong>${p.name}</strong></td>
+        <td style="font-family:var(--font-mono)">${fmtMoney(p.purchaseRate)}</td>
+        <td style="font-family:var(--font-mono)">${fmtMoney(p.saleRate)}</td>
+        <td style="font-family:var(--font-mono);font-weight:600;color:${isLow?'var(--accent-red)':'var(--text-primary)'}">${p.stock}</td>
+        <td>${p.lowAlert || 5}</td>
+        <td style="color:var(--accent-green);font-family:var(--font-mono)">${margin !== '—' ? margin + '%' : '—'}</td>
+        <td>${isLow ? '<span class="badge badge-danger blink"><i class="fas fa-exclamation-triangle"></i> Low</span>' : '<span class="badge badge-success"><i class="fas fa-check"></i> OK</span>'}</td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-secondary btn-sm" onclick="editProduct(${p.id})"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px">No products added yet.</td></tr>';
+  }
+
+  function filterProducts() {
+    const q = document.getElementById('prod-search').value.toLowerCase();
+    renderTable(q ? allProducts.filter(p => p.name.toLowerCase().includes(q)) : allProducts);
+  }
+
+  function saveProduct() {
+    const name = document.getElementById('pr-name').value.trim();
+    const purchaseRate = parseFloat(document.getElementById('pr-pur').value) || 0;
+    const saleRate = parseFloat(document.getElementById('pr-sale').value) || 0;
+    const stock = parseFloat(document.getElementById('pr-stock').value) || 0;
+    const lowAlert = parseFloat(document.getElementById('pr-low').value) || 5;
+    const editId = document.getElementById('pr-edit-id').value;
+    if (!name) { showToast('Product name required.', 'warning'); return; }
+    const products = DB.get('products', []);
+    if (editId) {
+      const idx = products.findIndex(p => p.id == editId);
+      if (idx > -1) products[idx] = { ...products[idx], name, purchaseRate, saleRate, stock, lowAlert };
+    } else {
+      products.push({ id: Date.now(), name, purchaseRate, saleRate, stock, lowAlert });
+    }
+    DB.set('products', products);
+    clearForm();
+    loadProducts();
+    showToast('Product saved!', 'success');
+    autoSync();
+  }
+
+  function editProduct(id) {
+    const p = DB.get('products', []).find(x => x.id == id);
+    if (!p) return;
+    document.getElementById('pr-name').value = p.name;
+    document.getElementById('pr-pur').value = p.purchaseRate;
+    document.getElementById('pr-sale').value = p.saleRate;
+    document.getElementById('pr-stock').value = p.stock;
+    document.getElementById('pr-low').value = p.lowAlert || 5;
+    document.getElementById('pr-edit-id').value = p.id;
+    document.getElementById('prod-form-title').textContent = 'Edit Product';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function deleteProduct(id) {
+    showConfirm('Delete Product', 'Delete this product? Stock history will remain.', () => {
+      DB.set('products', DB.get('products', []).filter(p => p.id != id));
+      loadProducts();
+      showToast('Product deleted.', 'warning');
+    });
+  }
+
+  function clearForm() {
+    ['pr-name','pr-pur','pr-sale','pr-edit-id'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pr-stock').value = '0';
+    document.getElementById('pr-low').value = '5';
+    document.getElementById('prod-form-title').textContent = 'New Product';
+  }
+
+  loadProducts();
+</script>
+</body>
+</html>

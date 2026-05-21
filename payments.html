@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payments — IMRC</title>
+<link rel="stylesheet" href="css/style.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  .payment-type-btn {
+    flex: 1; padding: 10px; border: 2px solid var(--border-color);
+    background: var(--bg-tertiary); color: var(--text-secondary);
+    border-radius: var(--radius); cursor: pointer; font-size: 12px;
+    font-weight: 600; text-align: center; transition: all 0.15s;
+  }
+  .payment-type-btn.active {
+    border-color: var(--accent-blue); background: rgba(0,122,204,0.12);
+    color: var(--accent-blue);
+  }
+  .outstanding-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; border-bottom: 1px solid var(--border-color);
+    transition: background 0.1s;
+  }
+  .outstanding-row:hover { background: var(--bg-hover); }
+  .outstanding-row:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+<div id="title-bar">
+  <div class="title-logo"><i class="fas fa-mobile-alt" style="font-size:10px"></i></div>
+  <div class="title-text company-name-title">IMRC — Management System</div>
+  <div class="title-actions">
+    <button class="title-btn" onclick="toggleTheme()"><i class="fas fa-adjust"></i></button>
+    <button class="title-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</div>
+
+<div id="app-wrapper">
+  <div id="sidebar">
+    <div class="sidebar-header">Navigation</div>
+    <div class="sidebar-menu">
+      <a class="sidebar-item" href="index.html"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-perm="parties" href="add_parties.html"><i class="fas fa-users"></i><span>Add Parties</span></a>
+      <a class="sidebar-item" data-perm="products" href="add_products.html"><i class="fas fa-box"></i><span>Add Products</span></a>
+      <a class="sidebar-item" data-perm="purchase" href="purchase.html"><i class="fas fa-shopping-cart"></i><span>Purchase Products</span></a>
+      <a class="sidebar-item" data-perm="sale" href="sales.html"><i class="fas fa-receipt"></i><span>Sale Products</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item active" data-perm="payments" href="payments.html"><i class="fas fa-hand-holding-usd"></i><span>Payments</span></a>
+      <a class="sidebar-item" data-perm="report" href="reports.html"><i class="fas fa-chart-bar"></i><span>Reports</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" href="settings.html"><i class="fas fa-cog"></i><span>Settings</span></a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sidebar-avatar">A</div>
+        <div>
+          <div style="font-size:12px;color:var(--text-primary);font-weight:600" id="sidebar-username">Admin</div>
+          <div style="font-size:10px;color:var(--text-muted)" id="sidebar-role">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="main-content">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div class="page-header-icon"><i class="fas fa-hand-holding-usd"></i></div>
+        <h2>Payments</h2>
+        <div class="page-header-sub">Record & manage party payments</div>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="stats-grid" style="margin-bottom:16px">
+        <div class="stat-card red">
+          <div class="stat-icon"><i class="fas fa-exclamation-circle"></i></div>
+          <div class="stat-value" id="st-total-outstanding">Rs 0</div>
+          <div class="stat-label">Total Outstanding</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+          <div class="stat-value" id="st-today-received">Rs 0</div>
+          <div class="stat-label">Today Received</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon"><i class="fas fa-users"></i></div>
+          <div class="stat-value" id="st-pending-parties">0</div>
+          <div class="stat-label">Pending Parties</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+          <div class="stat-value" id="st-total-received">Rs 0</div>
+          <div class="stat-label">Total Received (All)</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:360px 1fr;gap:16px">
+
+        <!-- Payment Form -->
+        <div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--accent-blue)"></i> Record Payment</div>
+
+            <div class="form-group">
+              <label class="form-label">Select Party *</label>
+              <select class="form-control" id="pay-party" onchange="onPayPartyChange()">
+                <option value="">-- Select Party --</option>
+              </select>
+            </div>
+
+            <!-- Current balance display -->
+            <div id="pay-balance-info" style="display:none;margin-bottom:12px">
+              <div style="background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--radius);padding:10px 12px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                  <span style="font-size:11px;color:var(--text-muted)">Current Outstanding:</span>
+                  <span id="pay-current-bal" style="font-family:var(--font-mono);font-weight:700;color:var(--accent-red)">Rs 0</span>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                  <span style="font-size:11px;color:var(--text-muted)">After Payment:</span>
+                  <span id="pay-after-bal" style="font-family:var(--font-mono);font-weight:700;color:var(--accent-green)">Rs 0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment type buttons -->
+            <div class="form-group">
+              <label class="form-label">Payment Type</label>
+              <div style="display:flex;gap:8px">
+                <button class="payment-type-btn active" id="btn-partial" onclick="setPayType('partial')">
+                  <i class="fas fa-coins"></i><br>Partial
+                </button>
+                <button class="payment-type-btn" id="btn-full" onclick="setPayType('full')">
+                  <i class="fas fa-check-double"></i><br>Full Pay
+                </button>
+                <button class="payment-type-btn" id="btn-clear" onclick="setPayType('clear')">
+                  <i class="fas fa-times-circle"></i><br>Clear All
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group" id="pay-amount-group">
+              <label class="form-label">Amount Received (Rs) *</label>
+              <input type="number" class="form-control" id="pay-amount"
+                placeholder="Enter amount" oninput="onAmountChange()" style="font-size:16px;font-weight:600">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Payment Method</label>
+              <select class="form-control" id="pay-method">
+                <option value="Cash">Cash</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Easypaisa">Easypaisa</option>
+                <option value="JazzCash">JazzCash</option>
+                <option value="Cheque">Cheque</option>
+              </select>
+            </div>
+
+            <div class="form-row cols-2">
+              <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" class="form-control" id="pay-date">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Note (Optional)</label>
+                <input type="text" class="form-control" id="pay-note" placeholder="Reference / note">
+              </div>
+            </div>
+
+            <div class="btn-group" style="margin-top:4px">
+              <button class="btn btn-success" onclick="savePayment(false)" style="flex:1;justify-content:center">
+                <i class="fas fa-save"></i> Save Payment
+              </button>
+              <button class="btn btn-whatsapp" onclick="savePayment(true)">
+                <i class="fab fa-whatsapp"></i> Save & WA
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Outstanding Parties -->
+        <div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-title" style="justify-content:space-between">
+              <span><i class="fas fa-users" style="color:var(--accent-red)"></i> Outstanding Parties</span>
+              <input type="text" class="form-control" id="out-search" placeholder="Filter..."
+                oninput="filterOutstanding()" style="width:160px">
+            </div>
+            <div id="outstanding-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment History -->
+      <div class="card" style="margin-top:4px">
+        <div class="card-title" style="justify-content:space-between">
+          <span><i class="fas fa-history" style="color:var(--accent-blue)"></i> Payment History</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select class="form-control" id="hist-party-filter" onchange="filterHistory()" style="width:160px">
+              <option value="">All Parties</option>
+            </select>
+            <input type="text" class="form-control" id="hist-search" placeholder="Search..."
+              oninput="filterHistory()" style="width:140px">
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Date</th><th>Party</th><th>Type</th>
+                <th>Method</th><th>Amount</th><th>Balance After</th><th>Note</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="payment-history-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="page-footer">Developer: Muhammad Iqbal | 0317-5825000 | iqbalje@gmail.com</div>
+    </div>
+  </div>
+</div>
+
+<div id="status-bar">
+  <div class="status-item"><i class="fas fa-circle" style="color:#4ec9b0;font-size:8px"></i> Connected</div>
+  <div class="status-item" id="status-user"></div>
+  <div class="status-item" id="status-time"></div>
+  <div style="margin-left:auto" class="status-item"><i class="fas fa-mobile-alt"></i> IMRC</div>
+</div>
+<div id="toast-container"></div>
+
+<script src="js/db.js"></script>
+<script>
+  const currentUser = initSidebar('payments');
+  if (!currentUser) throw new Error('Not logged in');
+
+  let currentPayType = 'partial';
+  let allPayments = [];
+
+  // Init
+  (function init() {
+    document.getElementById('pay-date').value = todayISO();
+    loadParties();
+    loadStats();
+    loadOutstanding();
+    loadPaymentHistory();
+  })();
+
+  function loadParties() {
+    const parties = DB.get('parties', []);
+    // Payment form select
+    const sel = document.getElementById('pay-party');
+    sel.innerHTML = '<option value="">-- Select Party --</option>' +
+      parties.map(p => `<option value="${p.id}">${p.name}${p.balance > 0 ? ' — ' + fmtMoney(p.balance) : ''}</option>`).join('');
+    // History filter select
+    const hsel = document.getElementById('hist-party-filter');
+    hsel.innerHTML = '<option value="">All Parties</option>' +
+      parties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  }
+
+  /* ===== STATS ===== */
+  function loadStats() {
+    const parties  = DB.get('parties', []);
+    const payments = DB.get('payments', []);
+    const today    = todayISO();
+    const totalOut = parties.reduce((s, p) => s + (p.balance || 0), 0);
+    const pendingCount = parties.filter(p => p.balance > 0).length;
+    const todayRec  = payments.filter(p => p.date === today).reduce((s, p) => s + p.amount, 0);
+    const totalRec  = payments.reduce((s, p) => s + p.amount, 0);
+    document.getElementById('st-total-outstanding').textContent = fmtMoney(totalOut);
+    document.getElementById('st-pending-parties').textContent   = pendingCount;
+    document.getElementById('st-today-received').textContent    = fmtMoney(todayRec);
+    document.getElementById('st-total-received').textContent    = fmtMoney(totalRec);
+  }
+
+  /* ===== PARTY CHANGE ===== */
+  function onPayPartyChange() {
+    const partyId = document.getElementById('pay-party').value;
+    const party   = DB.get('parties', []).find(p => p.id == partyId);
+    const bal     = party?.balance || 0;
+    if (party && bal > 0) {
+      document.getElementById('pay-balance-info').style.display = 'block';
+      document.getElementById('pay-current-bal').textContent = fmtMoney(bal);
+      document.getElementById('pay-after-bal').textContent   = fmtMoney(bal);
+    } else {
+      document.getElementById('pay-balance-info').style.display = 'none';
+    }
+    // Auto-fill full amount if full/clear type
+    if (currentPayType === 'full' || currentPayType === 'clear') {
+      document.getElementById('pay-amount').value = bal;
+    }
+    onAmountChange();
+  }
+
+  function setPayType(type) {
+    currentPayType = type;
+    ['partial','full','clear'].forEach(t => {
+      document.getElementById('btn-' + t).classList.toggle('active', t === type);
+    });
+    const partyId = document.getElementById('pay-party').value;
+    const party   = DB.get('parties', []).find(p => p.id == partyId);
+    const bal     = party?.balance || 0;
+    if (type === 'full' || type === 'clear') {
+      document.getElementById('pay-amount').value = bal;
+      document.getElementById('pay-amount-group').style.opacity = type === 'clear' ? '0.5' : '1';
+      document.getElementById('pay-amount').disabled = type === 'clear';
+    } else {
+      document.getElementById('pay-amount').disabled = false;
+      document.getElementById('pay-amount-group').style.opacity = '1';
+    }
+    onAmountChange();
+  }
+
+  function onAmountChange() {
+    const partyId = document.getElementById('pay-party').value;
+    const party   = DB.get('parties', []).find(p => p.id == partyId);
+    const bal     = party?.balance || 0;
+    const amt     = parseFloat(document.getElementById('pay-amount').value) || 0;
+    const afterBal = Math.max(0, bal - amt);
+    if (document.getElementById('pay-balance-info').style.display !== 'none') {
+      document.getElementById('pay-after-bal').textContent = fmtMoney(afterBal);
+      document.getElementById('pay-after-bal').style.color =
+        afterBal > 0 ? 'var(--accent-orange)' : 'var(--accent-green)';
+    }
+  }
+
+  /* ===== SAVE PAYMENT ===== */
+  function savePayment(sendWhatsApp = false) {
+    const partyId = document.getElementById('pay-party').value;
+    const method  = document.getElementById('pay-method').value;
+    const date    = document.getElementById('pay-date').value;
+    const note    = document.getElementById('pay-note').value.trim();
+    if (!partyId) { showToast('Select a party.', 'warning'); return; }
+
+    const parties   = DB.get('parties', []);
+    const partyIdx  = parties.findIndex(p => p.id == partyId);
+    const currentBal = parties[partyIdx]?.balance || 0;
+
+    let amount, payTypeLabel;
+    if (currentPayType === 'clear') {
+      amount = currentBal;
+      payTypeLabel = 'Credit Clear';
+    } else {
+      amount = parseFloat(document.getElementById('pay-amount').value) || 0;
+      payTypeLabel = currentPayType === 'full' ? 'Full Payment' : 'Partial Payment';
+    }
+    if (amount <= 0) { showToast('Enter a valid amount.', 'warning'); return; }
+
+    const balanceBefore = currentBal;
+    const balanceAfter  = Math.max(0, currentBal - amount);
+
+    // Update party balance
+    parties[partyIdx].balance = balanceAfter;
+    DB.set('parties', parties);
+
+    // Save payment record
+    const payments = DB.get('payments', []);
+    const payObj = {
+      id: Date.now(),
+      partyId, partyName: parties[partyIdx]?.name,
+      type: payTypeLabel, method, date, amount,
+      balanceBefore, balanceAfter, note,
+      createdBy: currentUser.name || currentUser.username
+    };
+    payments.push(payObj);
+    DB.set('payments', payments);
+
+    // Send WhatsApp if requested
+    if (sendWhatsApp) {
+      const party = parties[partyIdx];
+      if (!party?.contact) {
+        showToast('Party contact number not found!', 'warning');
+      } else {
+        const co  = Company.get();
+        let msg = `🏬 *${co.name}*\n📞 ${co.phone}\n`;
+        msg += `─────────────────\n`;
+        msg += `✅ *Payment Received*\n\n`;
+        msg += `👤 Party: ${party.name}\n`;
+        msg += `📅 Date: ${formatDate(date)}\n`;
+        msg += `💰 Amount: *${fmtMoney(amount)}*\n`;
+        msg += `📋 Method: ${method}\n`;
+        msg += `─────────────────\n`;
+        msg += `Previous Balance: ${fmtMoney(balanceBefore)}\n`;
+        msg += `Amount Paid: ${fmtMoney(amount)}\n`;
+        if (balanceAfter > 0) {
+          msg += `*Remaining: ${fmtMoney(balanceAfter)}*\n`;
+          msg += `─────────────────\n`;
+          msg += `⚠️ Braey meherbani remaining amount jald ada karein.`;
+        } else {
+          msg += `*Remaining: Clear ✅*\n`;
+          msg += `─────────────────\n`;
+          msg += `Shukerya! Aapka account clear ho gaya. 🙏`;
+        }
+        if (note) msg += `\n📝 Note: ${note}`;
+        sendWA(party.contact, msg);
+      }
+    }
+
+    // Reset form
+    document.getElementById('pay-party').value   = '';
+    document.getElementById('pay-amount').value  = '';
+    document.getElementById('pay-note').value    = '';
+    document.getElementById('pay-balance-info').style.display = 'none';
+    document.getElementById('pay-amount').disabled = false;
+    setPayType('partial');
+
+    loadParties();
+    loadStats();
+    loadOutstanding();
+    loadPaymentHistory();
+    showToast(`Payment of ${fmtMoney(amount)} saved!`, 'success');
+    autoSync();
+  }
+
+  /* ===== OUTSTANDING LIST ===== */
+  function loadOutstanding() {
+    const parties = DB.get('parties', []).filter(p => p.balance > 0)
+      .sort((a, b) => b.balance - a.balance);
+    renderOutstanding(parties);
+  }
+
+  function filterOutstanding() {
+    const q = document.getElementById('out-search').value.toLowerCase();
+    const parties = DB.get('parties', []).filter(p => p.balance > 0)
+      .sort((a, b) => b.balance - a.balance);
+    renderOutstanding(q ? parties.filter(p => p.name.toLowerCase().includes(q)) : parties);
+  }
+
+  function renderOutstanding(list) {
+    const container = document.getElementById('outstanding-list');
+    if (!list.length) {
+      container.innerHTML = `
+        <div style="text-align:center;padding:20px;color:var(--accent-green)">
+          <i class="fas fa-check-circle" style="font-size:24px;margin-bottom:6px"></i>
+          <div>All balances clear!</div>
+        </div>`;
+      return;
+    }
+    container.innerHTML = list.map(p => `
+      <div class="outstanding-row">
+        <div>
+          <div style="font-weight:600;font-size:13px">${p.name}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${p.contact || 'No contact'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:var(--font-mono);font-weight:700;color:var(--accent-red);min-width:80px;text-align:right">
+            ${fmtMoney(p.balance)}
+          </span>
+          <button class="btn btn-primary btn-sm" onclick="quickSelectParty(${p.id})" title="Record Payment">
+            <i class="fas fa-plus"></i>
+          </button>
+          <button class="btn btn-whatsapp btn-sm" onclick="sendPaymentReminder(${p.id})" title="Send Reminder">
+            <i class="fab fa-whatsapp"></i>
+          </button>
+        </div>
+      </div>`).join('');
+  }
+
+  function quickSelectParty(id) {
+    document.getElementById('pay-party').value = id;
+    onPayPartyChange();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ===== HISTORY ===== */
+  function loadPaymentHistory() {
+    allPayments = DB.get('payments', []);
+    renderHistory(allPayments);
+  }
+
+  function filterHistory() {
+    const q       = document.getElementById('hist-search').value.toLowerCase();
+    const partyId = document.getElementById('hist-party-filter').value;
+    let list = allPayments;
+    if (partyId) list = list.filter(p => p.partyId == partyId);
+    if (q)       list = list.filter(p =>
+      (p.partyName || '').toLowerCase().includes(q) ||
+      (p.method || '').toLowerCase().includes(q) ||
+      (p.note || '').toLowerCase().includes(q));
+    renderHistory(list);
+  }
+
+  function renderHistory(list) {
+    const tbody = document.getElementById('payment-history-body');
+    tbody.innerHTML = [...list].reverse().map((p, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${formatDate(p.date)}</td>
+        <td><strong>${p.partyName || '—'}</strong></td>
+        <td><span class="badge ${p.type === 'Credit Clear' ? 'badge-success' : p.type === 'Full Payment' ? 'badge-info' : 'badge-warning'}">${p.type}</span></td>
+        <td>${p.method}</td>
+        <td style="font-family:var(--font-mono);font-weight:700;color:var(--accent-green)">${fmtMoney(p.amount)}</td>
+        <td style="font-family:var(--font-mono);color:${p.balanceAfter > 0 ? 'var(--accent-orange)' : 'var(--accent-green)'}">
+          ${p.balanceAfter > 0 ? fmtMoney(p.balanceAfter) : '<span class="badge badge-success">Clear</span>'}
+        </td>
+        <td style="font-size:11px;color:var(--text-muted)">${p.note || '—'}</td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="deletePayment(${p.id})">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>`).join('') ||
+      '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px">No payments recorded yet.</td></tr>';
+  }
+
+  function deletePayment(id) {
+    showConfirm('Delete Payment', 'Delete this payment record? Party balance will NOT be auto-reversed.', () => {
+      DB.set('payments', DB.get('payments', []).filter(p => p.id != id));
+      loadPaymentHistory();
+      loadStats();
+      showToast('Payment record deleted.', 'warning');
+    });
+  }
+</script>
+</body>
+</html>

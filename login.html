@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — IMRC</title>
+<link rel="stylesheet" href="css/style.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  body { overflow: auto; height: 100vh; display: flex; align-items: center; justify-content: center; }
+  #login-page { width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 20px; min-height: 100vh; }
+  .login-container { width: 100%; max-width: 380px; }
+  .login-logo { text-align: center; margin-bottom: 28px; }
+  .login-logo-icon { width: 60px; height: 60px; background: var(--accent-blue); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 26px; color: #fff; margin: 0 auto 12px; box-shadow: 0 4px 20px rgba(0,122,204,0.4); }
+  .login-logo h1 { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+  .login-logo p { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .login-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; padding: 28px; box-shadow: var(--shadow); }
+  .login-tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+  .login-tab { flex: 1; padding: 8px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .login-tab.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+  .login-form-section { display: none; }
+  .login-form-section.active { display: block; }
+  .login-footer { text-align: center; margin-top: 14px; font-size: 11px; color: var(--text-muted); }
+  /* Company setup */
+  .company-setup-card { background: var(--bg-secondary); border: 1px solid var(--accent-orange); border-radius: 6px; padding: 24px; margin-top: 16px; box-shadow: var(--shadow); }
+  .company-setup-title { font-size: 14px; font-weight: 700; color: var(--accent-orange); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+</style>
+</head>
+<body>
+<div id="login-page">
+  <div class="login-container">
+    <div class="login-logo">
+      <div class="login-logo-icon"><i class="fas fa-mobile-alt"></i></div>
+      <h1 id="login-company-name">Iqbal Mobile Repairing Center</h1>
+      <p>Professional Management System v2.0</p>
+    </div>
+
+    <!-- Login / Create Admin -->
+    <div class="login-card" id="login-card">
+      <div class="login-tabs">
+        <div class="login-tab active" onclick="switchTab('login')">Login</div>
+        <div class="login-tab" id="tab-create" onclick="switchTab('create')">Create Admin</div>
+      </div>
+
+      <!-- Login Form -->
+      <div id="login-section" class="login-form-section active">
+        <div class="form-group">
+          <label class="form-label"><i class="fas fa-user" style="color:var(--accent-blue);margin-right:4px"></i> Username</label>
+          <input type="text" class="form-control" id="login-user" placeholder="Enter username" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div class="form-group">
+          <label class="form-label"><i class="fas fa-lock" style="color:var(--accent-blue);margin-right:4px"></i> Password</label>
+          <input type="password" class="form-control" id="login-pass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div id="login-error" class="alert alert-danger" style="display:none"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="doLogin()">
+          <i class="fas fa-sign-in-alt"></i> Sign In
+        </button>
+      </div>
+
+      <!-- Create Admin -->
+      <div id="create-section" class="login-form-section">
+        <div id="admin-exists-msg" class="alert alert-warning" style="display:none;margin-bottom:14px">
+          <i class="fas fa-lock"></i> Administrator already exists. Please login.
+        </div>
+        <div id="create-admin-form">
+          <div class="alert alert-info" style="margin-bottom:14px"><i class="fas fa-info-circle"></i> Create the first Administrator account.</div>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-control" id="new-admin-name" placeholder="Administrator name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-control" id="new-admin-user" placeholder="Choose username">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-control" id="new-admin-pass" placeholder="Choose password">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <input type="password" class="form-control" id="new-admin-pass2" placeholder="Confirm password">
+          </div>
+          <div id="create-error" class="alert alert-danger" style="display:none"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="createAdmin()">
+            <i class="fas fa-user-shield"></i> Create Administrator
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Company Setup (shown after first admin creation) -->
+    <div class="company-setup-card" id="company-setup" style="display:none">
+      <div class="company-setup-title"><i class="fas fa-building"></i> Company Setup</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Please set up your company information. You can change this later in Settings.</p>
+      <div class="form-group">
+        <label class="form-label">Company Name</label>
+        <input type="text" class="form-control" id="co-name" placeholder="Your business name" value="Iqbal Mobile Repairing Center">
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label class="form-label">Mobile Number</label>
+          <input type="text" class="form-control" id="co-phone" placeholder="03XX-XXXXXXX" value="0317-5825000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="text" class="form-control" id="co-email" placeholder="email@example.com" value="iqbalje@gmail.com">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Address</label>
+        <input type="text" class="form-control" id="co-address" placeholder="Business address">
+      </div>
+      <button class="btn btn-success" style="width:100%;justify-content:center" onclick="saveCompanySetup()">
+        <i class="fas fa-check"></i> Save & Continue
+      </button>
+    </div>
+
+    <div class="login-footer">
+      Developer: Muhammad Iqbal | 0317-5825000 | iqbalje@gmail.com
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="js/db.js"></script>
+<script>
+  // Apply theme
+  applyTheme();
+
+  // Init
+  window.onload = function() {
+    // If already logged in, redirect
+    const sess = Session.get();
+    if (sess) {
+      const users = DB.get('users', []);
+      const user = users.find(u => u.id === sess.id);
+      if (user) { window.location.href = 'index.html'; return; }
+    }
+
+    // Update login company name
+    const co = Company.get();
+    document.getElementById('login-company-name').textContent = co.name;
+
+    // Check admin exists
+    const users = DB.get('users', []);
+    const adminExists = users.some(u => u.role === 'admin');
+    if (adminExists) {
+      document.getElementById('admin-exists-msg').style.display = 'flex';
+      document.getElementById('create-admin-form').style.display = 'none';
+    }
+  };
+
+  function switchTab(tab) {
+    document.querySelectorAll('.login-tab').forEach((t, i) => t.classList.toggle('active', (tab === 'login' ? i === 0 : i === 1)));
+    document.getElementById('login-section').classList.toggle('active', tab === 'login');
+    document.getElementById('create-section').classList.toggle('active', tab === 'create');
+  }
+
+  function createAdmin() {
+    const name = document.getElementById('new-admin-name').value.trim();
+    const user = document.getElementById('new-admin-user').value.trim();
+    const pass = document.getElementById('new-admin-pass').value;
+    const pass2 = document.getElementById('new-admin-pass2').value;
+    const errEl = document.getElementById('create-error');
+    const show = m => { errEl.style.display = 'flex'; errEl.querySelector('span').textContent = m; };
+    errEl.style.display = 'none';
+    if (!name || !user || !pass) return show('All fields are required.');
+    if (pass !== pass2) return show('Passwords do not match.');
+    const users = DB.get('users', []);
+    if (users.some(u => u.role === 'admin')) return show('Admin already exists.');
+    if (users.some(u => u.username === user)) return show('Username already taken.');
+    users.push({ id: Date.now(), name, username: user, password: btoa(pass), role: 'admin', permissions: { parties: true, products: true, purchase: true, sale: true, report: true, payments: true } });
+    DB.set('users', users);
+    showToast('Administrator created!', 'success');
+    // Show company setup
+    document.getElementById('company-setup').style.display = 'block';
+    document.getElementById('create-admin-form').style.display = 'none';
+    document.getElementById('admin-exists-msg').style.display = 'flex';
+  }
+
+  function saveCompanySetup() {
+    const co = {
+      name: document.getElementById('co-name').value.trim() || 'Iqbal Mobile Repairing Center',
+      phone: document.getElementById('co-phone').value.trim() || '0317-5825000',
+      email: document.getElementById('co-email').value.trim() || 'iqbalje@gmail.com',
+      address: document.getElementById('co-address').value.trim()
+    };
+    Company.set(co);
+    showToast('Company saved! Please login.', 'success');
+    document.getElementById('company-setup').style.display = 'none';
+    switchTab('login');
+  }
+
+  function doLogin() {
+    const user = document.getElementById('login-user').value.trim();
+    const pass = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'none';
+    const users = DB.get('users', []);
+    const found = users.find(u => u.username === user && u.password === btoa(pass));
+    if (!found) { errEl.style.display = 'flex'; errEl.querySelector('span').textContent = 'Invalid username or password.'; return; }
+    Session.set(found);
+    window.location.href = 'index.html';
+  }
+</script>
+</body>
+</html>

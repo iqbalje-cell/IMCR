@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purchase Products — IMRC</title>
+<link rel="stylesheet" href="css/style.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  .prod-suggest-box {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 300;
+    background: var(--bg-secondary); border: 1px solid var(--accent-blue);
+    border-top: none; border-radius: 0 0 4px 4px;
+    max-height: 200px; overflow-y: auto; display: none;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+  }
+  .prod-suggest-item {
+    padding: 7px 12px; cursor: pointer; font-size: 12px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex; justify-content: space-between; align-items: center;
+    transition: background 0.1s;
+  }
+  .prod-suggest-item:hover, .prod-suggest-item.focused { background: var(--bg-selected); color: #fff; }
+  .prod-suggest-item .suggest-meta { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+  .prod-suggest-item.focused .suggest-meta { color: rgba(255,255,255,0.7); }
+
+  .pur-item-row {
+    display: grid;
+    grid-template-columns: 2.5fr 80px 100px 100px 100px 40px;
+    gap: 8px; align-items: center; margin-bottom: 6px;
+  }
+  .pur-items-header {
+    display: grid;
+    grid-template-columns: 2.5fr 80px 100px 100px 100px 40px;
+    gap: 8px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    color: var(--text-muted); padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-color); margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+<div id="title-bar">
+  <div class="title-logo"><i class="fas fa-mobile-alt" style="font-size:10px"></i></div>
+  <div class="title-text company-name-title">IMRC — Management System</div>
+  <div class="title-actions">
+    <button class="title-btn" onclick="toggleTheme()"><i class="fas fa-adjust"></i></button>
+    <button class="title-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</div>
+
+<div id="app-wrapper">
+  <div id="sidebar">
+    <div class="sidebar-header">Navigation</div>
+    <div class="sidebar-menu">
+      <a class="sidebar-item" href="index.html"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-perm="parties" href="add_parties.html"><i class="fas fa-users"></i><span>Add Parties</span></a>
+      <a class="sidebar-item" data-perm="products" href="add_products.html"><i class="fas fa-box"></i><span>Add Products</span></a>
+      <a class="sidebar-item active" data-perm="purchase" href="purchase.html"><i class="fas fa-shopping-cart"></i><span>Purchase Products</span></a>
+      <a class="sidebar-item" data-perm="sale" href="sales.html"><i class="fas fa-receipt"></i><span>Sale Products</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" data-perm="payments" href="payments.html"><i class="fas fa-hand-holding-usd"></i><span>Payments</span></a>
+      <a class="sidebar-item" data-perm="report" href="reports.html"><i class="fas fa-chart-bar"></i><span>Reports</span></a>
+      <div class="sidebar-divider"></div>
+      <a class="sidebar-item" href="settings.html"><i class="fas fa-cog"></i><span>Settings</span></a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sidebar-avatar">A</div>
+        <div>
+          <div style="font-size:12px;color:var(--text-primary);font-weight:600" id="sidebar-username">Admin</div>
+          <div style="font-size:10px;color:var(--text-muted)" id="sidebar-role">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="main-content">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div class="page-header-icon"><i class="fas fa-shopping-cart"></i></div>
+        <h2>Purchase Products</h2>
+        <div class="page-header-sub">Record incoming stock purchases</div>
+      </div>
+
+      <!-- Bill Header -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title"><i class="fas fa-file-invoice" style="color:var(--accent-blue)"></i> Purchase Bill</div>
+        <div class="form-row cols-3">
+          <div class="form-group">
+            <label class="form-label">Party / Supplier *</label>
+            <select class="form-control" id="pur-party">
+              <option value="">-- Select Party --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Slip / Bill No *</label>
+            <input type="text" class="form-control" id="pur-slip" placeholder="Slip number">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-control" id="pur-date">
+          </div>
+        </div>
+      </div>
+
+      <!-- Items -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title"><i class="fas fa-list" style="color:var(--accent-green)"></i> Purchase Items</div>
+        <div class="pur-items-header">
+          <span>Product (type to search)</span>
+          <span>Qty</span>
+          <span>Pur. Rate</span>
+          <span>Sale Rate</span>
+          <span>Total</span>
+          <span></span>
+        </div>
+        <div id="pur-items-container"></div>
+        <button class="btn btn-secondary btn-sm" onclick="addPurRow()" style="margin-top:6px">
+          <i class="fas fa-plus"></i> Add Row
+        </button>
+        <div class="bill-total-row">
+          <div>
+            <span class="bill-total-label">Grand Total:</span>
+            <span class="bill-total-value" id="pur-grand-total">Rs 0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="savePurchase()"><i class="fas fa-save"></i> Save Purchase</button>
+        <button class="btn btn-secondary" onclick="clearPurForm()"><i class="fas fa-times"></i> Clear</button>
+      </div>
+
+      <!-- History -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-title" style="justify-content:space-between">
+          <span><i class="fas fa-history" style="color:var(--accent-blue)"></i> Purchase History</span>
+          <input type="text" class="form-control" id="pur-search" placeholder="Search..."
+            oninput="filterPurchases()" style="width:180px">
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Slip No</th><th>Date</th><th>Party</th>
+                <th>Items</th><th>Grand Total</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pur-history-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="page-footer">Developer: Muhammad Iqbal | 0317-5825000 | iqbalje@gmail.com</div>
+    </div>
+  </div>
+</div>
+
+<div id="status-bar">
+  <div class="status-item"><i class="fas fa-circle" style="color:#4ec9b0;font-size:8px"></i> Connected</div>
+  <div class="status-item" id="status-user"></div>
+  <div class="status-item" id="status-time"></div>
+  <div style="margin-left:auto" class="status-item"><i class="fas fa-mobile-alt"></i> IMRC</div>
+</div>
+
+<!-- Purchase Detail Modal -->
+<div class="modal-overlay" id="pur-detail-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3><i class="fas fa-file-invoice" style="color:var(--accent-blue);margin-right:6px"></i> Purchase Detail</h3>
+      <button class="modal-close" onclick="closeModal('pur-detail-modal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="pur-detail-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('pur-detail-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/db.js"></script>
+<script>
+  const currentUser = initSidebar('purchase');
+  if (!currentUser) throw new Error('Not logged in');
+
+  let rowCount = 0;
+  let allPurchases = [];
+
+  // Init
+  (function init() {
+    document.getElementById('pur-date').value = todayISO();
+    loadParties();
+    addPurRow();
+    loadPurchaseHistory();
+  })();
+
+  function loadParties() {
+    const parties = DB.get('parties', []);
+    const sel = document.getElementById('pur-party');
+    sel.innerHTML = '<option value="">-- Select Party --</option>' +
+      parties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  }
+
+  /* ===== ADD ROW ===== */
+  function addPurRow(prodId = '', qty = 1, purRate = 0, saleRate = 0) {
+    rowCount++;
+    const rc = rowCount;
+    const row = document.createElement('div');
+    row.className = 'pur-item-row';
+    row.id = 'pur-row-' + rc;
+    row.innerHTML = `
+      <div style="position:relative">
+        <input type="text" class="form-control" id="pr-name-${rc}"
+          placeholder="Type product name..." autocomplete="off"
+          oninput="showPurSuggest(${rc})" onkeydown="purSuggestNav(event,${rc})"
+          onfocus="showPurSuggest(${rc})" style="font-size:12px">
+        <input type="hidden" id="pr-id-${rc}" value="${prodId}">
+        <div class="prod-suggest-box" id="pr-suggest-${rc}"></div>
+      </div>
+      <input type="number" class="form-control" id="pr-qty-${rc}" value="${qty}" min="1"
+        oninput="calcPurRow(${rc})" style="font-size:12px">
+      <input type="number" class="form-control" id="pr-pur-${rc}" value="${purRate}"
+        oninput="calcPurRow(${rc})" style="font-size:12px" placeholder="0">
+      <input type="number" class="form-control" id="pr-sale-${rc}" value="${saleRate}"
+        style="font-size:12px" placeholder="0">
+      <input type="number" class="form-control" id="pr-total-${rc}" value="${qty * purRate}" readonly
+        style="background:var(--bg-primary);font-size:12px;font-family:var(--font-mono)">
+      <button class="btn btn-danger btn-sm" onclick="removePurRow(${rc})">
+        <i class="fas fa-times"></i>
+      </button>`;
+    document.getElementById('pur-items-container').appendChild(row);
+    // Pre-fill if product given
+    if (prodId) {
+      const prod = DB.get('products', []).find(p => p.id == prodId);
+      if (prod) {
+        document.getElementById('pr-name-' + rc).value = prod.name;
+        document.getElementById('pr-pur-' + rc).value = purRate || prod.purchaseRate;
+        document.getElementById('pr-sale-' + rc).value = saleRate || prod.saleRate;
+        calcPurRow(rc);
+      }
+    }
+    document.getElementById('pr-name-' + rc).focus();
+  }
+
+  function removePurRow(rc) {
+    const row = document.getElementById('pur-row-' + rc);
+    if (row) row.remove();
+    calcPurGrand();
+  }
+
+  /* ===== AUTOCOMPLETE ===== */
+  function showPurSuggest(rc) {
+    const inp = document.getElementById('pr-name-' + rc);
+    const box = document.getElementById('pr-suggest-' + rc);
+    if (!inp || !box) return;
+    const q = inp.value.toLowerCase().trim();
+    const products = DB.get('products', []);
+    const matches = q
+      ? products.filter(p => p.name.toLowerCase().includes(q)).slice(0, 8)
+      : products.slice(0, 8);
+    if (!matches.length) { box.style.display = 'none'; return; }
+    box.innerHTML = matches.map(p =>
+      `<div class="prod-suggest-item" data-id="${p.id}"
+        data-name="${p.name.replace(/"/g,'&quot;')}"
+        data-pur="${p.purchaseRate}" data-sale="${p.saleRate}"
+        onmousedown="selectPurProduct(${rc},${p.id},'${p.name.replace(/'/g,"\\'")}',${p.purchaseRate},${p.saleRate})"
+        onmouseover="this.classList.add('focused')" onmouseout="this.classList.remove('focused')">
+        <span>${highlight(p.name, q)}</span>
+        <span class="suggest-meta">Stock:${p.stock} | P:${p.purchaseRate}</span>
+      </div>`
+    ).join('');
+    box.style.display = 'block';
+  }
+
+  function purSuggestNav(e, rc) {
+    const box = document.getElementById('pr-suggest-' + rc);
+    if (!box || box.style.display === 'none') return;
+    const items = box.querySelectorAll('.prod-suggest-item');
+    let cur = Array.from(items).findIndex(el => el.classList.contains('focused'));
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (cur >= 0) items[cur].classList.remove('focused');
+      cur = Math.min(cur + 1, items.length - 1);
+      items[cur].classList.add('focused');
+      items[cur].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (cur >= 0) items[cur].classList.remove('focused');
+      cur = Math.max(cur - 1, 0);
+      items[cur].classList.add('focused');
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (cur >= 0) {
+        const it = items[cur];
+        selectPurProduct(rc, it.dataset.id, it.dataset.name,
+          parseFloat(it.dataset.pur), parseFloat(it.dataset.sale));
+      }
+    } else if (e.key === 'Escape') {
+      box.style.display = 'none';
+    }
+  }
+
+  function selectPurProduct(rc, id, name, purRate, saleRate) {
+    document.getElementById('pr-name-' + rc).value = name;
+    document.getElementById('pr-id-' + rc).value = id;
+    document.getElementById('pr-pur-' + rc).value = purRate;
+    document.getElementById('pr-sale-' + rc).value = saleRate;
+    const box = document.getElementById('pr-suggest-' + rc);
+    if (box) box.style.display = 'none';
+    calcPurRow(rc);
+    const qtyEl = document.getElementById('pr-qty-' + rc);
+    if (qtyEl) { qtyEl.focus(); qtyEl.select(); }
+  }
+
+  document.addEventListener('click', e => {
+    document.querySelectorAll('.prod-suggest-box').forEach(box => {
+      if (!box.contains(e.target) && !e.target.classList.contains('form-control'))
+        box.style.display = 'none';
+    });
+  });
+
+  function calcPurRow(rc) {
+    const qty  = parseFloat(document.getElementById('pr-qty-' + rc)?.value)  || 0;
+    const rate = parseFloat(document.getElementById('pr-pur-' + rc)?.value) || 0;
+    const totalEl = document.getElementById('pr-total-' + rc);
+    if (totalEl) totalEl.value = qty * rate;
+    calcPurGrand();
+  }
+
+  function calcPurGrand() {
+    let total = 0;
+    document.querySelectorAll('[id^="pr-total-"]').forEach(el => total += parseFloat(el.value) || 0);
+    document.getElementById('pur-grand-total').textContent = fmtMoney(total);
+  }
+
+  /* ===== SAVE PURCHASE ===== */
+  function savePurchase() {
+    const party = document.getElementById('pur-party').value;
+    const slip  = document.getElementById('pur-slip').value.trim();
+    const date  = document.getElementById('pur-date').value;
+    if (!party || !slip) { showToast('Party and Slip No required.', 'warning'); return; }
+
+    const rows = document.querySelectorAll('.pur-item-row');
+    const items = [];
+    let grandTotal = 0;
+    let hasError = false;
+
+    rows.forEach(row => {
+      const rc = row.id.replace('pur-row-', '');
+      const id       = document.getElementById('pr-id-' + rc)?.value;
+      const name     = document.getElementById('pr-name-' + rc)?.value;
+      const qty      = parseFloat(document.getElementById('pr-qty-' + rc)?.value)  || 0;
+      const purRate  = parseFloat(document.getElementById('pr-pur-' + rc)?.value)  || 0;
+      const saleRate = parseFloat(document.getElementById('pr-sale-' + rc)?.value) || 0;
+      const total    = qty * purRate;
+      if (!id || qty <= 0) { hasError = true; return; }
+      items.push({ productId: id, productName: name, qty, purRate, saleRate, total });
+      grandTotal += total;
+    });
+
+    if (hasError || !items.length) { showToast('Add valid items.', 'warning'); return; }
+
+    /* Update stock & rates */
+    const products = DB.get('products', []);
+    items.forEach(item => {
+      const idx = products.findIndex(p => p.id == item.productId);
+      if (idx > -1) {
+        products[idx].stock        += item.qty;
+        products[idx].purchaseRate  = item.purRate;
+        if (item.saleRate > 0) products[idx].saleRate = item.saleRate;
+      }
+    });
+    DB.set('products', products);
+
+    const purchases = DB.get('purchases', []);
+    purchases.push({
+      id: Date.now(), party, slip, date, items, grandTotal,
+      createdBy: currentUser.name || currentUser.username
+    });
+    DB.set('purchases', purchases);
+
+    clearPurForm();
+    loadPurchaseHistory();
+    showToast('Purchase saved! Stock updated.', 'success');
+    autoSync();
+  }
+
+  function clearPurForm() {
+    document.getElementById('pur-party').value = '';
+    document.getElementById('pur-slip').value  = '';
+    document.getElementById('pur-date').value  = todayISO();
+    document.getElementById('pur-items-container').innerHTML = '';
+    document.getElementById('pur-grand-total').textContent = 'Rs 0';
+    rowCount = 0;
+    addPurRow();
+  }
+
+  /* ===== HISTORY ===== */
+  function loadPurchaseHistory() {
+    allPurchases = DB.get('purchases', []);
+    renderHistory(allPurchases);
+  }
+
+  function filterPurchases() {
+    const q = document.getElementById('pur-search').value.toLowerCase();
+    renderHistory(q
+      ? allPurchases.filter(p => p.slip.toLowerCase().includes(q) ||
+          (DB.get('parties',[]).find(pa=>pa.id==p.party)?.name||'').toLowerCase().includes(q))
+      : allPurchases);
+  }
+
+  function renderHistory(list) {
+    const parties = DB.get('parties', []);
+    const tbody   = document.getElementById('pur-history-body');
+    tbody.innerHTML = [...list].reverse().map(pur => {
+      const partyName = parties.find(p => p.id == pur.party)?.name || pur.party;
+      return `<tr>
+        <td><strong>${pur.slip}</strong></td>
+        <td>${formatDate(pur.date)}</td>
+        <td>${partyName}</td>
+        <td>${pur.items.length} item(s)</td>
+        <td style="font-family:var(--font-mono);font-weight:600">${fmtMoney(pur.grandTotal)}</td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-info btn-sm" onclick="viewPurchase(${pur.id})" title="View">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deletePurchase(${pur.id})" title="Delete">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px">No purchases yet.</td></tr>';
+  }
+
+  function viewPurchase(id) {
+    const pur     = DB.get('purchases', []).find(p => p.id == id);
+    const parties = DB.get('parties', []);
+    if (!pur) return;
+    const partyName = parties.find(p => p.id == pur.party)?.name || pur.party;
+    document.getElementById('pur-detail-body').innerHTML = `
+      <div style="margin-bottom:12px">
+        <div class="info-row">
+          <div class="info-pill"><i class="fas fa-file-alt"></i> Slip: <strong>${pur.slip}</strong></div>
+          <div class="info-pill"><i class="fas fa-calendar"></i> ${formatDate(pur.date)}</div>
+          <div class="info-pill"><i class="fas fa-user"></i> ${partyName}</div>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Pur. Rate</th><th>Sale Rate</th><th>Total</th></tr></thead>
+          <tbody>
+            ${pur.items.map((it, i) => `
+              <tr>
+                <td>${i+1}</td>
+                <td>${it.productName || it.productId}</td>
+                <td>${it.qty}</td>
+                <td style="font-family:var(--font-mono)">${fmtMoney(it.purRate)}</td>
+                <td style="font-family:var(--font-mono)">${fmtMoney(it.saleRate)}</td>
+                <td style="font-family:var(--font-mono);font-weight:600">${fmtMoney(it.total)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="text-align:right;margin-top:10px;font-size:14px;font-weight:700;color:var(--accent-green)">
+        Grand Total: ${fmtMoney(pur.grandTotal)}
+      </div>`;
+    document.getElementById('pur-detail-modal').classList.add('active');
+  }
+
+  function deletePurchase(id) {
+    showConfirm('Delete Purchase', 'Delete this purchase? Stock will NOT be reversed automatically.', () => {
+      DB.set('purchases', DB.get('purchases', []).filter(p => p.id != id));
+      loadPurchaseHistory();
+      showToast('Purchase deleted.', 'warning');
+    });
+  }
+
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+  function highlight(text, q) {
+    if (!q) return text;
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx < 0) return text;
+    return text.slice(0, idx) +
+      '<strong style="color:var(--accent-blue)">' + text.slice(idx, idx + q.length) + '</strong>' +
+      text.slice(idx + q.length);
+  }
+</script>
+</body>
+</html>
